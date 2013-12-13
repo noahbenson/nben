@@ -568,27 +568,85 @@
 ;; #real
 (defmacro infinite-sum
   "(infinite-sum iterator term) yields a real number that is estimated by summing the terms formed
-     by the term-form when bound under iterator. For information on the format of iterators see the
-     documentation for nben.util.parse-iterator. In both the term-form and the error-form, the
-     iterator variable is bound.
+     by the term-form when bound under iterator. The iterator must be expressed as follows:
+     [iterator-symbol <:from start-value> <:by step-size>] where both the :from and :by arguments
+     are optional and will default to 0 and 1 respectively. For example, [k :from 1] will bind k to
+     1, 2, 3 ... etc. when evaluating term and error; [k :from -1 :by -1] will bind k to the
+     infinite sequence -1, -2, -3 ....
+     The term may be expressed as a vector [term-symbol term-expression], in which case the error
+     expression, if described, may refer to term-symbol when calculating the error.
 
    Options:
      :error (default: :automatic) If :automatic, uses the absolute value of the term as the error
        and requires that all terms decrease monotonically in size. Otherwise, may be a function of
        three arguments, the iterator value, its new term, and the new sum including the new term; it
        must yield a positive rational number that decreases monotonically as the sequence proceeds.
+     :bind-previous-term (default: nil) If a symbol is given, then binds the symbol to the previous
+       term during every evaluation of the term and error; for the first term, the symbol is bound
+       to nil.
+     :bind-sum (default: nil) If a symbol is given, then binds the total sum, prior to this term, to
+       the symbol during evaluation of the term and the error; for the first term, the symbol is
+       bound to nil.
 
    Examples:
      (infinite-sum [k :from 0] (/ 1 (factorial k))) => e"
-  [[iterator-sym &{:keys [from by] :or {from 0 by 1}}] term &{:keys [error] :or {error :automatic}}]
-  `(let [by-arg# ~by
-         iter# (iterator :from ~from
-                         :to (if (< by-arg# 0) :-infinity :infinity)
-                         :by by-arg#)]
-     (letfn [(next-step-fn# [~iterator-sym] (let [term# ~term] (cons )
-        
-   
-  
+  [[iterator-sym &{:keys [from by] :or {from 0 by 1}}]
+   term
+   &{:keys [error bind-sum bind-previous-term] :or {error :automatic}}]
+  (let [termsym (if (vector? term) (first term) (gensym "term"))
+        termexpr (if (vector? term) (fnext term) term)]
+    (cond
+     (and bind-sum bind-previous-term)
+     `(let [by-arg# ~by
+            iter# (iterator :from ~from
+                            :to (if (< by-arg# 0) :-infinity :infinity)
+                            :by by-arg#)]
+        (letfn [(next-step-fn# [i# ~bind-sum ~bind-previous-term]
+                 (let [~iterator-sym (first i#)
+                       ~termsym ~termexpr]
+                   (cons 
+                    ~(if (= error :automatic) termsym [termsym error])
+                    (lazy-seq (next-step-fn# (next i#)
+                                             (+ ~termsym ~bind-sum)
+                                             ~termsym)))))]
+          (nben.jvm.RealNumber. (lazy-seq (next-step-fn# iter# nil nil)))))
+     bind-sum
+     `(let [by-arg# ~by
+            iter# (iterator :from ~from
+                            :to (if (< by-arg# 0) :-infinity :infinity)
+                            :by by-arg#)]
+        (letfn [(next-step-fn# [i# ~bind-sum]
+                 (let [~iterator-sym (first i#)
+                       ~termsym ~termexpr]
+                   (cons 
+                    ~(if (= error :automatic) termsym [termsym error])
+                    (lazy-seq (next-step-fn# (next i#) (+ ~termsym ~bind-sum))))))]
+          (nben.jvm.RealNumber. (lazy-seq (next-step-fn# iter# nil nil)))))
+     bind-previous-term
+     `(let [by-arg# ~by
+            iter# (iterator :from ~from
+                            :to (if (< by-arg# 0) :-infinity :infinity)
+                            :by by-arg#)]
+        (letfn [(next-step-fn# [i# ~bind-previous-term]
+                 (let [~iterator-sym (first i#)
+                       ~termsym ~termexpr]
+                   (cons 
+                    ~(if (= error :automatic) termsym [termsym error])
+                    (lazy-seq (next-step-fn# (next i#) ~termsym)))))]
+          (nben.jvm.RealNumber. (lazy-seq (next-step-fn# iter# nil nil)))))
+     :else
+     `(let [by-arg# ~by
+            iter# (iterator :from ~from
+                            :to (if (< by-arg# 0) :-infinity :infinity)
+                            :by by-arg#)]
+        (letfn [(next-step-fn# [i#]
+                 (let [~iterator-sym (first i#)
+                       ~termsym ~termexpr]
+                   (cons 
+                    ~(if (= error :automatic) termsym [termsym error])
+                    (lazy-seq (next-step-fn# (next i#))))))]
+          (nben.jvm.RealNumber. (lazy-seq (next-step-fn# iter#))))))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Section 4.1. Functions for arithmetic.
@@ -605,11 +663,11 @@
   ([a] a)
   ([a b] (cond (quotient? a)
                (cond (quotient? b) (+ a b)
-                     (real? b) (
+                     (real? b)
            (if (tensor? b)
              (if (= (length a) (length b))
                (map plus (normal a) (normal b))
-               (arg-err "Cannot add tensors of unequal length (" (length a) " and " (lenth b)")"))
+               (arg-err "Cannot add tensors of unequal length (" (length a) " and " (lenth b) ")"))
              (map #(plus % b) (normal a)))
            (if (tensor? b)
              (map #(plus % a) (normal b))
@@ -617,12 +675,13 @@
   ([a b & more] (reduce plus (plus a b) more)))
 (defn pplus
   "pplus is identical to plus except that it maps over tensor addition in parallel using pmap."
+  ([] 0)
   ([a] a)
   ([a b] (if (tensor? a)
            (if (tensor? b)
              (if (= (length a) (length b))
                (pmap pplus (normal a) (normal b))
-               (arg-err "Cannot add tensors of unequal length (" (length a) " and " (lenth b)")"))
+               (arg-err "Cannot add tensors of unequal length (" (length a) " and " (lenth b) ")"))
              (pmap #(pplus % b) (normal a)))
            (if (tensor? b)
              (pmap #(pplus % a) (normal b))

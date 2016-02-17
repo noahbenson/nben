@@ -41,66 +41,6 @@ import java.util.Arrays;
  */
 public class Util {
 
-   /** Util.buildSimplexIndex(n, data) yields an index idx for the given data such that idx[i] is an
-    *  array of indices in the second dimension of data that you can find i. The assumption here is
-    *  that data is an s x n array where s is the dimensionality of the simplices and n is the
-    *  number of simplices. The parameter n must be the highest number in data.
-    *
-    *  @param n the max value that appears in data
-    *  @param data the simplex array; this is expected to be a d x m matrix where d is the 
-    *         dimensionality of the simplices and m is the number of simplices; i.e., for 20 line
-    *         simplices, data should be 2 x 20; for 40 triangle simplices, data should be 3 x 20
-    *  @return an index idx of size n such that idx[i] is an array of the simplex indices into data
-    *          at which the value i can be found
-    */
-   public static int[][] buildSimplexIndex(int n, int[][] data) {
-      int[][] index = new int[n][];
-      int m = data[0].length;
-      int[] u, v;
-      for (int j = 0; j < data.length; ++j) {
-         for (int i = 0; i < m; ++i) {
-            u = index[data[j][i]];
-            if (u == null) {
-               u = new int[1];
-               u[0] = i;
-            } else {
-               v = new int[u.length + 1];
-               System.arraycopy(u, 0, v, 0, u.length);
-               v[u.length] = i;
-               u = v;
-            }
-            index[data[j][i]] = u;
-         }
-      }
-      return index;
-   }
-
-   /** Util.subsampleIndex(subset, index) yields a set of all integers in the given
-    *  index that are pointed to by any element of the given subset.
-    *
-    *  @param subset the subset of ids in index that should be subsampled
-    *  @param index the index that should be subsampled from
-    *  @return an array ss such that for each element of ss, ss[i], there is some k such that
-    *          index[k, ss[i]] is an element of subset
-    */
-   public static int[] subsampleIndex(int[] subset, int[][] index) {
-      int i,j;
-      int[] ss;
-      HashSet<Integer> q = new HashSet<Integer>();
-      for (i = 0; i < subset.length; ++i) {
-         ss = index[subset[i]];
-         if (ss != null) {
-            for (j = 0; j < ss.length; ++j) 
-               q.add(new Integer(ss[j]));
-         }
-      }
-      int[] samp = new int[q.size()];
-      i = 0;
-      for (Iterator<Integer> it = q.iterator(); it.hasNext(); ++i)
-         samp[i] = it.next().intValue();
-      return samp;
-   }
-
    /** Util.facesToEdges(faces) yields a 2 x m matrix of edges in the given 3 x p matrix of
     *  faces; m is the number of edges in the face list and p is the number of faces.
     *

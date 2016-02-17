@@ -34,19 +34,34 @@ package nben.neuroscience.registration;
 public interface IPotentialField {
    /** The calculate method yields the value of the potential at the given coordinate matrix X over
     *  the given subset of vertices in subset and places the gradient for these vertices in the
-    *  given gradient matrix.
+    *  given gradient matrix. On error, an exception is thrown; this only occurs when invoking the
+    *  Par.run() function, so it should be referenced for details of exceptions.
     *
     *  @return the potential energy of the potential field at the coordinate configuration X
-    *  @param subset an array of vertex indices over which the potential and gradient should be
-    *                calculated; note that this does not change the size of the gradient or
-    *                coordinate matrices, which are always expected to be big enough for the entire
-    *                calculation, but it does instruct the function to ignore certain vertices
     *  @param X the (dims x vertices)-sized matrix of vertex coordinates at which to evaluate the
     *           potential
     *  @param G the (dims x vertices)-sized output matrix to which the gradient matrix should be
     *           added; note that this matrix may already contain data from another potential field
     *           that is part of a potential field sum --- thus one should always add to the gradient
     *           and never overwrite it
+    *  @see Par.run
     */
-   public double calculate(int[] subset, double[][] X, double[][] G);
+   public double calculate(double[][] X, double[][] G)
+      throws InterruptedException,
+             ExecutionException, 
+             CancellationException,
+             NullPointerException, 
+             RejectedExecutionException;
+   /** Potential Fields must be capable of producing duplicates of themselves that are optimized to
+    *  operate over a specific subset of the total vertex set. P.sub(ss) produces one such potential
+    *  field for the subset ss. If null is given, then this should be interpreted as all-vertices.
+    *
+    *  @param ss an array of vertex indices over which the potential and gradient should be
+    *            calculated; note that this does not change the size of the gradient or
+    *            coordinate matrices, which are always expected to be big enough for the entire
+    *            calculation, but it does instruct the function to ignore certain vertices. If null,
+    *            this should be interpreted as all vertices.
+    *  @return the new potential field
+    */
+   public IPotentialField subfield(int[] ss);
 }

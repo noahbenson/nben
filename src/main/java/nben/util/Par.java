@@ -47,7 +47,15 @@ import java.util.Arrays;
  */
 public final class Par {
 
-      // Data about how to optimally multi-thread
+   /** The MIN_SUGGESTED_TASKS value is intended as a guideline for when one ought to parallelize a
+    *  small calculation instead of executing it directly in the current thread. Generally speaking,
+    *  if you have a small calculation that needs to be done n times, you should do it in a loop in
+    *  the current thread if n is less than this value. This is by no means a hard-and-fast absolute
+    *  recommendation --- it is merely a guideline.
+    */
+   public final static int MIN_SUGGESTED_TASKS = 200;
+
+   // Data about how to optimally multi-thread
    private static ExecutorService m_pool;
    private static int m_nthreads;
    /** Par.pool() yields an ExecutorService with Par.worker() threads

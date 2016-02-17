@@ -90,4 +90,18 @@ public final class Numbers {
       return q;
    }
 
+   /** Numbers.cross(a, b) yields the cross-product vector of the two 3-dimensional bectors a and b.
+    *
+    *  @param a a 3D vector
+    *  @param b a 3D vector
+    *  @return the cross product of a and b: a x b.
+    */
+   public static final double[] cross(double[] a, double[] b) {
+      double[] c = new double[3];
+      c[0] = a[1]*b[2] - a[2]*b[1];
+      c[1] = a[2]*b[0] - a[0]*b[2];
+      c[2] = a[0]*b[1] - a[1]*b[0];
+      return c;
+   }
+
 }

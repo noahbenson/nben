@@ -29,8 +29,13 @@ import nben.mesh.registration.IDifferentiatedFunction;
 import nben.util.Par;
 import nben.util.Numbers;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.CancellationException;
+
+import java.util.HashSet;
+import java.util.Iterator;
 
 /** The ASimplexPotential class defines the code that computates of potential fields based on the
  *  interactions between (usually small) submeshes in the mesh. Examples of these include edge,
@@ -175,7 +180,7 @@ public abstract class ASimplexPotential implements IPotentialField {
          int i, j, k, s;
          double mag, m, m0;
          double[][] ws;
-         IDifferentiatedForm f;
+         IDifferentiatedFunction f;
          for (i = startID; i < simplexSubset.length; i += workers) {
             s = simplexSubset[i];
             f = forms[s];
@@ -187,7 +192,7 @@ public abstract class ASimplexPotential implements IPotentialField {
             mag = f.dy(m, m0);
             for (j = 0; j < ws.length; ++j) {
                for (k = 0; k < X.length; ++k)
-                  workspace[j][k] *= mag;
+                  ws[j][k] *= mag;
             }
             // now store the potential value in simplexPotential
             simplexPotential[s] = f.y(m, m0);
@@ -292,8 +297,9 @@ public abstract class ASimplexPotential implements IPotentialField {
       this.simplexPotential = new double[s];
       // save the original distances
       this.M0 = new double[m];
+      this.M  = new double[m];
       for (i = 0; i < m; ++i)
-         M0[i] = calculateSimplex(i, X0, WS);
+         M0[i] = calculateSimplex(i, X0, this.workspace[i]);
       // fill these in for convenience
       this.allSimplices = new int[m];
       for (i = 0; i < n; ++i) allSimplices[i] = i;
@@ -326,8 +332,8 @@ public abstract class ASimplexPotential implements IPotentialField {
     *  @param ss the subset of vertices for the new potential field to use
     */
    protected ASimplexPotential(ASimplexPotential field, int[] ss) {
-      this.subset           = (ss == null? allVertices : ss);
-      this.simplexSubset    = (ss == null? allSimplices 
+      this.subset           = (ss == null? field.allVertices : ss);
+      this.simplexSubset    = (ss == null? field.allSimplices 
                                          : subsampleSimplexIndex(ss, field.simplices));
       this.forms            = field.forms;
       this.simplices        = field.simplices;
@@ -336,6 +342,7 @@ public abstract class ASimplexPotential implements IPotentialField {
       this.workspace        = field.workspace;
       this.simplexPotential = field.simplexPotential;
       this.M0               = field.M0;
+      this.M                = field.M;
       this.allSimplices     = field.allSimplices;
       this.allVertices      = field.allVertices;
       // allocate new workers
@@ -348,11 +355,11 @@ public abstract class ASimplexPotential implements IPotentialField {
       }
    }
 
-   /** Calculates the potential value and gradient at the given position X and over the given
-    *  subset. When adding up the potential, each vertex in subset adds 1/2 of the potential
-    *  of each of its edges; this means that if a vertex on one side of an edge is in the subset
-    *  but the other vertex of the edge is not, then only half of that edge's potential will be
-    *  added to the total potential value.
+   /** Calculates the potential value and gradient at the given position X and places the gradient
+    *  in the param G. When adding up the potential, each vertex in subset adds 1/s of the potential
+    *  of each of its simplices where s is the number of vertices in a simplex; this means that if a
+    *  vertex on one side of a simplex is in the subset but the other vertex of the simplex is not,
+    *  then only half of that simplex's potential will be added to the total potential value.
     *
     *  @see IPotentialField
     */
@@ -363,9 +370,9 @@ public abstract class ASimplexPotential implements IPotentialField {
              NullPointerException, 
              RejectedExecutionException {
       int i;
-      int workers = Par.workers();
+      int workers = vertexWorkers.length;
       double potential = 0;
-      for (i = 0; i < nworkers; ++i) {
+      for (i = 0; i < workers; ++i) {
          simplexWorkers[i].X = X;
          vertexWorkers[i].X = X;
          vertexWorkers[i].gradient = G;
@@ -375,7 +382,7 @@ public abstract class ASimplexPotential implements IPotentialField {
       // now run, in parallel, the vertex calculatios; this fills up the gradient
       Par.run(vertexWorkers);
       // finally, sum up the vertex workers' potential values to return
-      for (i = 0; i < vw.length; ++i) {
+      for (i = 0; i < workers; ++i) {
          if (Double.isNaN(vertexWorkers[i].potential) 
              || Double.isInfinite(vertexWorkers[i].potential))
             return vertexWorkers[i].potential;

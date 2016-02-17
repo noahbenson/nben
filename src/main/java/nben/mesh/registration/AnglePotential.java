@@ -46,7 +46,7 @@ public class AnglePotential extends ASimplexPotential {
     *
     *  @returns the value of angle id at the position X
     */
-   public final double calculateSimplex(int id, double[][] X, double[][][] G) {
+   public final double calculateSimplex(int id, double[][] X, double[][] G) {
       double abx, aby, acx, acy, theta;
       int i, dims = X.length;
       double[] nAB = new double[dims];

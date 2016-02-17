@@ -24,11 +24,14 @@ package nben.mesh.registration;
 
 import nben.mesh.registration.Util;
 import nben.mesh.registration.IPotentialField;
+
 import nben.util.Par;
 import nben.util.Numbers;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.CancellationException;
 
 /** The PotentialValue class stores data related to the potential and gradient value at a particular
  *  point in a potential field. When constructed, the potential value object automatically
@@ -85,7 +88,7 @@ public final class PotentialValue {
       public GradWorker(int i, int ws) {id = i; workers = ws;}
 
       public void run() {
-         double tmp, maxgradlen;
+         double tmp, maxgradlen = 0;
          int i, j, u;
          gradlen2 = 0;
          for (i = id; i < subset.length; i += workers)
@@ -159,7 +162,7 @@ public final class PotentialValue {
       }
       this.subset = subset;
       // okay, now we calculate...
-      this.potential = field.calculate(subset, X, gradient);
+      this.potential = field.calculate(X, gradient);
       // now we calculate gradient norms and length...
       double glen;
       if (this.subset.length < Par.MIN_SUGGESTED_TASKS) {
@@ -191,37 +194,80 @@ public final class PotentialValue {
    public PotentialValue(IPotentialField field,
                          int[] subset,
                          double[][] X,
-                         double[][] gradient) {
+                         double[][] gradient)
+      throws InterruptedException,
+             ExecutionException, 
+             CancellationException,
+             NullPointerException, 
+             RejectedExecutionException,
+             IllegalArgumentException {
       this(field, subset, X, gradient, null);
    }
    public PotentialValue(IPotentialField field,
                          int[] subset,
                          double[][] X,
-                         double[] gradientNorms) {
+                         double[] gradientNorms)
+      throws InterruptedException,
+             ExecutionException, 
+             CancellationException,
+             NullPointerException, 
+             RejectedExecutionException,
+             IllegalArgumentException {
       this(field, subset, X, null, gradientNorms);
    }
    public PotentialValue(IPotentialField field,
                          int[] subset,
-                         double[][] X) {
+                         double[][] X)
+      throws InterruptedException,
+             ExecutionException, 
+             CancellationException,
+             NullPointerException, 
+             RejectedExecutionException,
+             IllegalArgumentException {
       this(field, subset, X, null, null);
-   }   public PotentialValue(IPotentialField field,
+   }
+   public PotentialValue(IPotentialField field,
                          double[][] X,
                          double[][] gradient,
-                         double[] gradientNorms) {
+                         double[] gradientNorms)
+      throws InterruptedException,
+             ExecutionException, 
+             CancellationException,
+             NullPointerException, 
+             RejectedExecutionException,
+             IllegalArgumentException {
       this(field, null, X, gradient, gradientNorms);
    }
    public PotentialValue(IPotentialField field,
                          double[][] X,
-                         double[][] gradient) {
+                         double[][] gradient)
+      throws InterruptedException,
+             ExecutionException, 
+             CancellationException,
+             NullPointerException, 
+             RejectedExecutionException,
+             IllegalArgumentException {
       this(field, null, X, gradient, null);
    }
    public PotentialValue(IPotentialField field,
                          double[][] X,
-                         double[] gradientNorms) {
+                         double[] gradientNorms)
+      throws InterruptedException,
+             ExecutionException, 
+             CancellationException,
+             NullPointerException, 
+             RejectedExecutionException,
+             IllegalArgumentException {
       this(field, null, X, null, gradientNorms);
    }
    public PotentialValue(IPotentialField field,
-                         double[][] X) {
+                         double[][] X)
+      throws InterruptedException,
+             ExecutionException, 
+             CancellationException,
+             NullPointerException, 
+             RejectedExecutionException,
+             IllegalArgumentException {
       this(field, null, X, null, null);
    }
 

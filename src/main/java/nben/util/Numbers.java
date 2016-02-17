@@ -49,7 +49,7 @@ public final class Numbers {
     *  @param x the number whose closeness to zero should be tested
     *  @returns true if Math.abs(x) is less than Numbers.ZERO_TOL, otherwise false.
     */
-   static final boolean zeroish(double x) {return x*x < ZERO_TOL_2;}
+   public static final boolean zeroish(double x) {return x*x < ZERO_TOL_2;}
    /** Numbers.zeroish(x, tol) yields true if the absolute value of x is less than or equal to the
     *  magnitude of tol. The actual check performed is x*x less than tol*tol.
     *
@@ -57,7 +57,7 @@ public final class Numbers {
     *  @param tol tolerance cutoff to which x should be compared
     *  @returns true if Math.abs(x) is less than tol, otherwise false.
     */
-   static final boolean zeroish(double x, double tol) {return x*x < tol*tol;}
+   public static final boolean zeroish(double x, double tol) {return x*x < tol*tol;}
    /** Numbers.zeroish(x) yields an array of boolean values the same length as the array x, each
     *  element of which is true if the absolute value of the equivalent value in x is less than or
     *  equal to the value Numbers.ZERO_TOL (equal to 1e-30).
@@ -82,7 +82,7 @@ public final class Numbers {
     *  @returns a boolean array q, each element q[i] of which is true if Math.abs(x[i]) is less than
     *           tol, otherwise false.
     */
-   static final boolean[] zeroish(double[] x, double tol) {
+   public static final boolean[] zeroish(double[] x, double tol) {
       if (x == null) return null;
       tol *= tol;
       boolean[] q = new boolean[x.length];

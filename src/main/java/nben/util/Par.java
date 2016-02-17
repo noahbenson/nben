@@ -98,7 +98,7 @@ public final class Par {
     *  @throws NullPointerException if rs or one of the elements of rs is null
     *  @throws RejectedExecutionException if one of the tasks cannot be scheduled for execution
     */
-   public final void run(Runnable[] rs) 
+   public final static void run(Runnable[] rs) 
       throws InterruptedException,
              ExecutionException, 
              CancellationException,
@@ -132,7 +132,7 @@ public final class Par {
     *  @throws NullPointerException if rs or one of the elements of rs is null
     *  @throws RejectedExecutionException if one of the tasks cannot be scheduled for execution
     */
-   public final <T> Object[] run(Callable<T>[] cs) 
+   public final static <T> Object[] run(Callable<T>[] cs) 
       throws InterruptedException,
              ExecutionException, 
              CancellationException,
@@ -181,7 +181,7 @@ public final class Par {
     *  @throws IllegalArgumentException if the length of res less than the length of cs
     */
    @SuppressWarnings("unchecked") 
-   public final <T> T[] run(Callable<T>[] cs, T[] res) 
+   public final static <T> T[] run(Callable<T>[] cs, T[] res) 
       throws InterruptedException,
              ExecutionException, 
              CancellationException,
@@ -218,7 +218,7 @@ public final class Par {
     *  @throws NullPointerException if rs or one of the elements of rs is null
     *  @throws RejectedExecutionException if one of the tasks cannot be scheduled for execution
     */
-   public final Future[] submit(Runnable[] rs) 
+   public final static Future[] submit(Runnable[] rs) 
       throws NullPointerException, 
              RejectedExecutionException {
       if (rs == null) {
@@ -244,7 +244,7 @@ public final class Par {
     *  @throws NullPointerException if cs or one of the elements of cs is null
     *  @throws RejectedExecutionException if one of the tasks cannot be scheduled for execution
     */
-   public final <T> Future[] submit(Callable<T>[] cs) 
+   public final static <T> Future[] submit(Callable<T>[] cs) 
       throws NullPointerException, 
              RejectedExecutionException {
       if (cs == null) {
@@ -275,7 +275,7 @@ public final class Par {
     *  @throws IllegalArgumentException if the length of res less than the length of cs
     */
    @SuppressWarnings("unchecked") 
-   public final <T> Future<T>[] submit(Callable<T>[] cs, Future<T>[] futs)
+   public final static <T> Future<T>[] submit(Callable<T>[] cs, Future<T>[] futs)
       throws NullPointerException, 
              RejectedExecutionException,
              IllegalArgumentException {

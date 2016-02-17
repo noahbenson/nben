@@ -22,11 +22,6 @@
 
 package nben.mesh.registration;
 
-import nben.mesh.registration.APotentialField;
-import nben.mesh.registration.IDifferentiatedFunction;
-import nben.mesh.registration.HarmonicFunction;
-import nben.mesh.registration.EdgePotential;
-
 import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -96,6 +91,29 @@ public class Util {
          }
       }
       return angles;
+   }
+   
+   /** Util.faceFunctionsToAngleFunctions(fs) yields an array of the functions found in the array
+    *  of functions fs such that, if there are k fs corresponding the the k faces in the array T,
+    *  and an angle potential is created using the Util.facesToAngles(T) function to translate the
+    *  faces into angles, then Util.faceFunctionsToAngleFunctions(fs) will yield an array of angle
+    *  functions that corresponds with Util.facesToAngles(T).
+    *
+    *  @param fs the list of function forms corresponding to a matrix of faces, one per face
+    *  @return an array of function forms that corresponds to a matrix of triangles that would
+    *          be constructed from an array of faces using Util.facesToAngles.
+    */
+   public static IDifferentiatedFunction[] faceFunctionsToAngleFunctions(IDifferentiatedFunction[] fs) {
+      if (fs == null) return null;
+      int n = fs.length;
+      int i, j, k;
+      IDifferentiatedFunction[] fa = new IDifferentiatedFunction[3*n];
+      for (j = 0; j < 3; ++j) { // angle number...
+         for (i = 0; i < n; ++i) { // face number...
+            fa[i + n*j] = fs[i];
+         }
+      }
+      return fa;
    }
 
    /** Given a list of faces (3 x m), yields a list of the vertices in the perimeter in either a

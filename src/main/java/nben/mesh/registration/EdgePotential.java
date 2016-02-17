@@ -22,16 +22,10 @@
 
 package nben.mesh.registration;
 
-import nben.mesh.registration.Util;
 import nben.mesh.registration.IPotentialField;
 import nben.mesh.registration.ASimplexPotential;
-import nben.mesh.registration.IDifferentiatedFunction;
 
-import nben.util.Par;
 import nben.util.Numbers;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 
 /** The EdgePotential class defines the code that computates of potential fields based on the
  *  interactions between neighboring vertices in the mesh. To construct an EdgePotential, one must

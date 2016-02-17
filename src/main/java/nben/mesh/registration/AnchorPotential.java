@@ -22,13 +22,9 @@
 
 package nben.mesh.registration;
 
-import nben.mesh.registration.Util;
 import nben.mesh.registration.IPotentialField;
 import nben.mesh.registration.ASimplexPotential;
 import nben.mesh.registration.IDifferentiatedFunction;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 
 /** The AnchorPotential class defines the code computations of potential fields based on the
  *  interactions between a vertex's position in the mesh and a fixed point in space. To construct an

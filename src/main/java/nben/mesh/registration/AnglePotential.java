@@ -22,7 +22,6 @@
 
 package nben.mesh.registration;
 
-import nben.mesh.registration.Util;
 import nben.mesh.registration.IPotentialField;
 import nben.mesh.registration.ASimplexPotential;
 import nben.mesh.registration.IDifferentiatedFunction;

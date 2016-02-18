@@ -686,7 +686,7 @@ public final class Fields {
     */
    public static PotentialSum newStandardMeshPotential(int[][] faces, double[][] X) {
       IPotentialField Pa = newWellAnglePotential(faces, X);
-      IPotentialField Pe = newHarmonicEdgePotential(100.0, 2.0, Util.facesToEdges(faces), X);
+      IPotentialField Pe = newHarmonicEdgePotential(250.0, 2.0, Util.facesToEdges(faces), X);
       PotentialSum P = new PotentialSum(Pa, Pe);
       if (X.length == 2)
          P.addField(newHarmonicPerimeterPotential(1.0, 2.0, faces, X));

@@ -21,7 +21,7 @@ This library currently contains the following modules:
    algorithms for finding the minima of such potential fields by warping the
    mesh. Although it was designed for use with 2D projections of cortical
    surface meshes, it is by no means limited or even specific to them.
-2. *nben.math*: This namespace is currently an under-development numerical
+2. **nben.math**: This namespace is currently an under-development numerical
    interface for clojure. 
 
 This library is in its early stages; expect it to change rapidly.

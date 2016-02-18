@@ -94,7 +94,13 @@ class PotentialSum implements IPotentialField {
    /** Adds a potential field to this object */
    synchronized public void addField(IPotentialField f) {
       IPotentialField[] fs;
-      if (terms == null) {
+      if (f == this) {
+         return;
+      } else if (f instanceof PotentialSum) {
+         fs = ((PotentialSum)f).fields();
+         for (int i = 0; i < fs.length; ++i)
+            addField(fs[i]);
+      } else if (terms == null) {
          terms = new IPotentialField[1];
          terms[0] = f;
       } else {

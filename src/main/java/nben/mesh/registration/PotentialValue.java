@@ -91,23 +91,44 @@ public final class PotentialValue {
          double tmp, maxgradlen = 0;
          int i, j, u;
          gradlen2 = 0;
-         for (i = id; i < subset.length; i += workers)
-            gradientNorms[subset[i]] = 0;
-         for (j = 0; j < gradient.length; ++j) {
+         if (subset == null) {
+            int n = gradientNorms.length;
+            for (i = id; i < n; i += workers)
+               gradientNorms[i] = 0;
+            for (j = 0; j < gradient.length; ++j) {
+               for (i = id; i < n; i += workers) {
+                  tmp = gradient[j][i];
+                  tmp *= tmp;
+                  gradientNorms[i] += tmp;
+                  gradlen2 += tmp;
+               }
+            }
+            for (i = id; i < n; i += workers) {
+               gradientNorms[i] = Math.sqrt(gradientNorms[i]);
+               if (i == id || gradientNorms[i] > maxgradlen) {
+                  maxgradlen = gradientNorms[i];
+                  maxgrad = i;
+               }
+            }
+         } else {
+            for (i = id; i < subset.length; i += workers)
+               gradientNorms[subset[i]] = 0;
+            for (j = 0; j < gradient.length; ++j) {
+               for (i = id; i < subset.length; i += workers) {
+                  u = subset[i];
+                  tmp = gradient[j][u];
+                  tmp *= tmp;
+                  gradientNorms[u] += tmp;
+                  gradlen2 += tmp;
+               }
+            }
             for (i = id; i < subset.length; i += workers) {
                u = subset[i];
-               tmp = gradient[j][u];
-               tmp *= tmp;
-               gradientNorms[u] += tmp;
-               gradlen2 += tmp;
-            }
-         }
-         for (i = id; i < subset.length; i += workers) {
-            u = subset[i];
-            gradientNorms[u] = Math.sqrt(gradientNorms[u]);
-            if (i == id || gradientNorms[u] > maxgradlen) {
-               maxgradlen = gradientNorms[u];
-               maxgrad = u;
+               gradientNorms[u] = Math.sqrt(gradientNorms[u]);
+               if (i == id || gradientNorms[u] > maxgradlen) {
+                  maxgradlen = gradientNorms[u];
+                  maxgrad = u;
+               }
             }
          }
       }
@@ -156,16 +177,12 @@ public final class PotentialValue {
       this.gradientNorms = (gradientNorms == null? new double[X[0].length] : gradientNorms);
       if (this.gradientNorms.length != X[0].length)
          throw new IllegalArgumentException("gradientNorms is not the same size as X[0]!");
-      if (subset == null) {
-         subset = new int[X[0].length];
-         for (int i = 0; i < subset.length; ++i) subset[i] = i;
-      }
       this.subset = subset;
       // okay, now we calculate...
-      this.potential = field.calculate(X, gradient);
+      this.potential = field.calculate(this.X, this.gradient);
       // now we calculate gradient norms and length...
       double glen;
-      if (this.subset.length < Par.MIN_SUGGESTED_TASKS) {
+      if (this.subset != null && this.subset.length < Par.MIN_SUGGESTED_TASKS) {
          GradWorker gw = new GradWorker(0, 1);
          gw.run();
          glen = gw.gradlen2;

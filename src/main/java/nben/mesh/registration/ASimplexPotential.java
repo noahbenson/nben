@@ -90,7 +90,9 @@ public abstract class ASimplexPotential implements IPotentialField {
     *  @param u the vertex to look up
     *  @return a list of all the simplices containing vertex u.
     */
-   public final int[] simplicesOf(int u) {return simplexIndex[u].clone();}
+   public final int[] simplicesOf(int u) {
+      return (simplexIndex[u] == null? null : simplexIndex[u].clone());
+   }
    
    /** The simplexPosition member variable keeps an index, like simplexIndex, such that if
     *  if simplexIndex[i][j] gives the simplex id s such that one of the vertices of s is i,
@@ -103,7 +105,9 @@ public abstract class ASimplexPotential implements IPotentialField {
     *  @param u the vertex to look up
     *  @return a list of all the simplices containing vertex u.
     */
-   public final int[] simplicesPositionsOf(int u) {return simplexPosition[u].clone();}
+   public final int[] simplicesPositionsOf(int u) {
+      return (simplexPosition[u] == null? null : simplexPosition[u].clone());
+   }
    
 
    /** The member variable forms holds an array of IDifferentiatedFunction objects, each of which
@@ -217,20 +221,20 @@ public abstract class ASimplexPotential implements IPotentialField {
          int i, j, k, u, s;
          int[] idx1, idx2;
          double tmp, frac = 1.0 / simplices.length;
-         double[][] ws;
-         double[] w;
+         double[] ws;
+         potential = 0;
          for (i = startID; i < subset.length; i += workers) {
             u = subset[i];
-            ws = workspace[u];
             idx1 = simplexIndex[u];
+            if (idx1 == null) continue;
             idx2 = simplexPosition[u];
             // sum u's simplices
             for (j = 0; j < idx1.length; ++j) {
                s = idx1[j];
-               w = ws[idx2[j]];
+               ws = workspace[s][idx2[j]];
                potential += frac * simplexPotential[s];
                for (k = 0; k < gradient.length; ++k)
-                  gradient[k][u] += w[k];
+                  gradient[k][u] += ws[k];
             }
          }
       }
@@ -281,6 +285,7 @@ public abstract class ASimplexPotential implements IPotentialField {
       this.simplexPosition = new int[n][];
       for (i = 0; i < n; ++i) {
          idx = simplexIndex[i];
+         if (idx == null) continue;
          this.simplexPosition[i] = new int[idx.length];
          for (j = 0; j < idx.length; ++j) {
             q = idx[j];
@@ -294,7 +299,7 @@ public abstract class ASimplexPotential implements IPotentialField {
       }
       // allocate our workspace and simplex potential storage
       this.workspace = new double[m][s][d];
-      this.simplexPotential = new double[s];
+      this.simplexPotential = new double[m];
       // save the original distances
       this.M0 = new double[m];
       this.M  = new double[m];
@@ -302,9 +307,9 @@ public abstract class ASimplexPotential implements IPotentialField {
          M0[i] = calculateSimplex(i, X0, this.workspace[i]);
       // fill these in for convenience
       this.allSimplices = new int[m];
-      for (i = 0; i < n; ++i) allSimplices[i] = i;
+      for (i = 0; i < m; ++i) allSimplices[i] = i;
       this.allVertices = new int[n];
-      for (i = 0; i < allVertices.length; ++i) allVertices[i] = i;
+      for (i = 0; i < n; ++i) allVertices[i] = i;
       // the initial subset for any potential field is all vertices
       this.subset = allVertices;
       this.simplexSubset = allSimplices;
@@ -372,6 +377,7 @@ public abstract class ASimplexPotential implements IPotentialField {
       int i;
       int workers = vertexWorkers.length;
       double potential = 0;
+      if (G == null) G = new double[X.length][X[0].length];
       for (i = 0; i < workers; ++i) {
          simplexWorkers[i].X = X;
          vertexWorkers[i].X = X;

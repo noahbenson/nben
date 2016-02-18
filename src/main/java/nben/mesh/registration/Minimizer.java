@@ -56,6 +56,7 @@ public class Minimizer {
       public int[] subset;      // intention is that this gets set by Minimizer during steps
       public double stepSize;   // the step size to take; negative to minimize, positive to revert
       public double[][] gradient;
+      public double[][] X;
       
       public StepWorker(int i, int nwork) {
          id = i;
@@ -64,22 +65,74 @@ public class Minimizer {
          stepSize = -1.0;
       }
       public void run() {
-         int j, u;
+         int i, j, u;
          if (subset == null) {
             u = m_X[0].length;
-            for (int i = id; i < u; i += workers) {
-               for (j = 0; j < m_X.length; ++j)
-                  m_X[j][i] += gradient[j][i]*stepSize;
+            for (j = 0; j < X.length; ++j) {
+               for (i = id; i < u; i += workers)
+                  X[j][i] += gradient[j][i] * stepSize;
             }
          } else {
-            for (int i = id; i < subset.length; i += workers) {
+            for (i = id; i < subset.length; i += workers) {
                u = subset[i];
-               for (j = 0; j < m_X.length; ++j)
-                  m_X[j][u] += gradient[j][u]*stepSize;
+               for (j = 0; j < X.length; ++j)
+                  X[j][u] += gradient[j][u]*stepSize;
             }
          }
       }
    }
+   // RevertWorker replaces data in a coordinate matrix
+   private class RevertWorker implements Runnable {
+      public final int id;
+      public final int workers;
+      public int[] subset;      // intention is that this gets set by Minimizer during steps
+      public double[][] X;      // dest matrix
+      public double[][] X0;     // source matrix
+      public RevertWorker(int i, int nwork) {
+         id = i;
+         workers = nwork;
+         subset = null;
+      }
+      public void run() {
+         if (subset == null) {
+            int n = m_X[0].length, j;
+            int mn = (int)(n *  id     / (double)workers);
+            int ct = (int)(n * (id + 1)/ (double)workers) - mn;
+            for (j = 0; j < m_X.length; ++j)
+               System.arraycopy(X0[j], mn, X[j], mn, ct);
+         } else {
+            int u, i, j;
+            for (i = id; i < subset.length; i += workers) {
+               u = subset[i];
+               for (j = 0; j < m_X.length; ++j)
+                  X[j][u] = X0[j][u];
+            }
+         }
+      }
+   }
+   // The ZeroWorker class is used by the class to zero the gradient quickly
+   private class ZeroWorker implements Runnable {
+      int id;
+      int workers;
+      double[][] gradient;
+      int[] subset;
+      public ZeroWorker(int i, int ws) {id = i; workers = ws;}
+      public void run() {
+         int i, j;
+         double[] grad;
+         for (j = 0; j < gradient.length; ++j) {
+            grad = gradient[j];
+            if (subset == null) {
+               for (i = id; i < grad.length; i += workers)
+                  grad[i] = 0;
+            } else {
+               for (i = id; i < subset.length; i += workers)
+                  grad[subset[i]] = 0;
+            }
+         }
+      }
+   }
+
 
    /** The Minimizer.Report class stores the data from a minimization trajectory and is returned
     *  by the step function. In the case of the step function, a report datum is filed every step,
@@ -145,6 +198,8 @@ public class Minimizer {
    private double[][]         m_X;
    // workspace used by this object
    private StepWorker[]       m_stepWorkers;
+   private RevertWorker[]     m_revertWorkers;
+   private ZeroWorker[]       m_zeroWorkers;
    // public data meant to be examined by outer callers in the case of an error
    public Report report;
    
@@ -171,9 +226,13 @@ public class Minimizer {
          System.arraycopy(X0[k], 0, m_X0[k], 0, n);
          System.arraycopy(X0[k], 0, m_X[k], 0, n);
       }
+      m_zeroWorkers = new ZeroWorker[Par.workers()];
       m_stepWorkers = new StepWorker[Par.workers()];
+      m_revertWorkers = new RevertWorker[Par.workers()];
       for (int i = 0; i < m_stepWorkers.length; ++i) {
+         m_zeroWorkers[i] = new ZeroWorker(i, Par.workers());
          m_stepWorkers[i] = new StepWorker(i, Par.workers());
+         m_revertWorkers[i] = new RevertWorker(i, Par.workers());
       }
       report = null;
    }
@@ -226,26 +285,42 @@ public class Minimizer {
 
    ////////////////////////////////////////////////////////////////////////////////
    // Private Helper Functions
-   synchronized private void takeStep(double dt, double[][] grad, int[] subset) throws Exception {
+   synchronized private void takeStep(double[][] X, double dt, double[][] grad, int[] subset)
+      throws Exception {
       for (int i = 0; i < m_stepWorkers.length; ++i) {
          m_stepWorkers[i].subset = subset;
+         m_stepWorkers[i].X = X;
          m_stepWorkers[i].gradient = grad;
          m_stepWorkers[i].stepSize = -dt;
       }
       Par.run(m_stepWorkers);
    }
-   synchronized private void revertStep(double dt, double[][] grad, int[] subset) throws Exception {
+   synchronized private void copyMatrix(double[][] X, double[][] X0, int[] subset)
+      throws Exception {
       for (int i = 0; i < m_stepWorkers.length; ++i) {
-         m_stepWorkers[i].subset = subset;
-         m_stepWorkers[i].gradient = grad;
-         m_stepWorkers[i].stepSize = dt;
+         m_revertWorkers[i].subset = subset;
+         m_revertWorkers[i].X = X;
+         m_revertWorkers[i].X0 = X0;
       }
-      Par.run(m_stepWorkers);
+      Par.run(m_revertWorkers);
+   }
+   synchronized private void copyMatrix(double[][] X, double[][] X0) throws Exception {
+      copyMatrix(X, X0, null);
+   }
+
+   synchronized private void clearGradient(double[][] grad, int[] ss) throws Exception {
+      for (int i = 0; i < m_zeroWorkers.length; ++i) {
+         m_zeroWorkers[i].gradient = grad;
+         m_zeroWorkers[i].subset = ss;
+      }
+      Par.run(m_zeroWorkers);
+   }
+   synchronized private void clearGradient(double[][] grad) throws Exception {
+      clearGradient(grad, null);
    }
 
    ////////////////////////////////////////////////////////////////////////////////
    // The Step Functions
-
    /** min.step(dt, ms, z) follows the gradient of its potential-field and configuration until it 
     *  has either traveled for dt units of time or has taken ms steps in such a way that no vertex
     *  ever moves more than distance z in a single step. 
@@ -266,6 +341,7 @@ public class Minimizer {
       double[][] gradTmp  = new double[m_X.length][m_X[0].length];
       double[]   norms    = new double[m_X[0].length];
       double[]   normsTmp = new double[m_X[0].length];
+      double[][] Xbak     = new double[m_X.length][m_X[0].length];
       double[][] buf2;
       double[]   buf1;
       // first thing: calculate the total gradient!
@@ -276,6 +352,8 @@ public class Minimizer {
          throw new IllegalArgumentException("Initial state has a NaN potential");
       else if (Double.isInfinite(val.potential))
          throw new IllegalArgumentException("Initial state has a non-finite potential");
+      // also, save a backup X
+      copyMatrix(Xbak, m_X, null);
       // okay, iteratively take appropriately-sized steps...
       t = 0;
       pe0 = val.potential;
@@ -293,8 +371,9 @@ public class Minimizer {
                // make sure we aren't below a threshold...
                if (Numbers.zeroish(dt)) throw new Exception("Step-size decreased to effectively 0");
                // take a step; this copies the current coordinates (m_X) into m_X0; same for grad
-               takeStep(dt, grad, null);
+               takeStep(m_X, dt, grad, null);
                // now, get the new potential value...
+               clearGradient(gradTmp);
                valTmp = currentPotential(gradTmp, normsTmp);
                // see if this was a valid step...
                if (Double.isNaN(valTmp.potential)) {
@@ -303,7 +382,7 @@ public class Minimizer {
                   // we broke a triangle or we failed to reduce potential (perhaps due to a 
                   // too-large step-size); swap x0 back to x and grad0 back to grad and try with a
                   // smaller step
-                  revertStep(dt, grad, null);
+                  copyMatrix(m_X, Xbak, null);
                   dt *= 0.5;
                } else {
                   // We've completed a step!
@@ -317,6 +396,7 @@ public class Minimizer {
                   norms = normsTmp;
                   normsTmp = buf1;
                   maxNorm = norms[val.steepestVertex];
+                  copyMatrix(Xbak, m_X, null);
                   // push this step onto the report...
                   re.push(dt, val.gradientLength * dt, maxNorm, val.potential - pe0);
                   // update the time, total distance, and potential
@@ -370,6 +450,7 @@ public class Minimizer {
       double[][] gradTmp  = new double[m_X.length][m_X[0].length];
       double[]   norms    = new double[m_X[0].length];
       double[]   normsTmp = new double[m_X[0].length];
+      double[][] Xbak     = new double[m_X.length][m_X[0].length];
       double[]   dtPart   = new double[partitions];
       // first thing: calculate the total gradient!
       PotentialValue val, valTmp;
@@ -378,6 +459,8 @@ public class Minimizer {
          throw new IllegalArgumentException("Initial state has a NaN potential");
       else if (Double.isInfinite(val.potential))
          throw new IllegalArgumentException("Initial state has a non-finite potential");
+      // now make a copy of X
+      copyMatrix(Xbak, m_X, null);
       // okay, iteratively take appropriately-sized overall-steps...
       maxNorm = norms[val.steepestVertex];
       pe0 = val.potential;
@@ -405,6 +488,7 @@ public class Minimizer {
                   // only do this part if it is divisible by the appropriate power
                   if ((miniStep + 1) % (1 << part) > 0) continue;
                   // we need to recalculate potential etc, as it may have changed...
+                  clearGradient(grad, ss[part]);
                   valTmp = new PotentialValue(fields[part], ss[part], m_X, grad, norms);
                   // also skip this part if the gradient is basically 0
                   if (Numbers.zeroish(valTmp.gradientLength)) continue;
@@ -418,7 +502,7 @@ public class Minimizer {
                      if (Numbers.zeroish(dt))
                         throw new Exception("Step-size decreased to effectively 0");
                      // take a single step...
-                     takeStep(dt, grad, ss[part]);
+                     takeStep(m_X, dt, grad, ss[part]);
                      // calculate the new gradient/potential
                      valTmp = new PotentialValue(fields[part], ss[part], m_X, gradTmp, normsTmp);
                      if (Double.isNaN(valTmp.potential)) {
@@ -427,10 +511,11 @@ public class Minimizer {
                         // we broke a triangle or we failed to reduce potential (perhaps due to a 
                         // too-large step-size); swap x0 back to x and grad0 back to grad and try 
                         // with a smaller step
-                        revertStep(dt, grad, ss[part]);
+                        copyMatrix(m_X, Xbak, ss[part]);
                         dt *= 0.5;
                      } else {
                         // the step was a success!
+                        copyMatrix(Xbak, m_X, ss[part]);
                         dtPart[part] += dt;
                         cont = false;
                      }

@@ -115,6 +115,7 @@ public class AnglePotential extends ASimplexPotential {
          for (i = 0; i < dims; ++i) {
             // start with corner 1:
             g1[i] = (cos * nAB[i] - nAC[i]) / (sin*dAB);
+if (Double.isNaN(g1[i])) throw new IllegalStateException("!!- " + id + " :: " + i + " ;; " + theta + " <--  ac:(" + acx + ", " + acy + ") ab:(" + abx + ", " + aby + ")");
             // then corner 2:
             g2[i] = (cos * nAC[i] - nAB[i]) / (sin*dAC);
             // finally corner 0:

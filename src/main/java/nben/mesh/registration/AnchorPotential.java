@@ -73,7 +73,8 @@ class AnchorPotential extends ASimplexPotential {
          d += tmp*tmp;
       }
       d = Math.sqrt(d);
-      for (j = 0; j < g.length; ++j) g[j] /= d;
+      if (d > 0)
+         for (j = 0; j < g.length; ++j) g[j] /= d;
       return d;
    }
    // private function for filling up an array of identical differentiated functions...

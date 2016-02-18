@@ -2,7 +2,7 @@
 A numerical and scientific toolkit written for the JVM.
 
 ## Author ######################################################################
-Noah C. Benson &lt;<nben@nyu,edu>&gt;
+Noah C. Benson &lt;<nben@nyu.edu>&gt;
 
 ## Introduction ################################################################
 

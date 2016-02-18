@@ -404,42 +404,42 @@ public final class Fields {
                                                       int[][] T, double[][] X) {
       InfiniteWellFunction[] fs = new InfiniteWellFunction[scale.length];
       for (int i = 0; i < fs.length; ++i)
-         fs[i] = new InfiniteWellFunction(scale[i] / (3 * T[0].length), 0.0, 0.5*Math.PI, shape[i]);
+         fs[i] = new InfiniteWellFunction(scale[i] / (3 * T[0].length), 0.0, Math.PI, shape[i]);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
    }
    public static AnglePotential newWellAnglePotential(double[] scale, double shape,
                                                       int[][] T, double[][] X) {
       InfiniteWellFunction[] fs = new InfiniteWellFunction[scale.length];
       for (int i = 0; i < fs.length; ++i)
-         fs[i] = new InfiniteWellFunction(scale[i] / (3 * T[0].length), 0.0, 0.5*Math.PI, shape);
+         fs[i] = new InfiniteWellFunction(scale[i] / (3 * T[0].length), 0.0, Math.PI, shape);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
    }
    public static AnglePotential newWellAnglePotential(double scale, double[] shape,
                                                       int[][] T, double[][] X) {
       InfiniteWellFunction[] fs = new InfiniteWellFunction[shape.length];
       for (int i = 0; i < fs.length; ++i)
-         fs[i] = new InfiniteWellFunction(scale / (3 * T[0].length), 0.0, 0.5*Math.PI, shape[i]);
+         fs[i] = new InfiniteWellFunction(scale / (3 * T[0].length), 0.0, Math.PI, shape[i]);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
    }
    public static AnglePotential newWellAnglePotential(double[] scale, int[][] T, double[][] X) {
       InfiniteWellFunction[] fs = new InfiniteWellFunction[scale.length];
       for (int i = 0; i < fs.length; ++i)
-         fs[i] = new InfiniteWellFunction(scale[i] / (3 * T[0].length), 0.0, 0.5*Math.PI);
+         fs[i] = new InfiniteWellFunction(scale[i] / (3 * T[0].length), 0.0, Math.PI);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
    }
    public static AnglePotential newWellAnglePotential(double scale, double shape,
                                                       int[][] T, double[][] X) {
       return new AnglePotential(new InfiniteWellFunction(scale / (3*T[0].length), 
-                                                         0.0, 0.5*Math.PI, shape),
+                                                         0.0, Math.PI, shape),
                                 Util.facesToAngles(T), X);
    }
    public static AnglePotential newWellAnglePotential(double scale,
                                                       int[][] T, double[][] X) {
-      return new AnglePotential(new InfiniteWellFunction(scale / (3*T[0].length), 0.0, 0.5*Math.PI),
+      return new AnglePotential(new InfiniteWellFunction(scale / (3*T[0].length), 0.0, Math.PI),
                                 Util.facesToAngles(T), X);
    }
    public static AnglePotential newWellAnglePotential(int[][] T, double[][] X) {
-      return new AnglePotential(new InfiniteWellFunction(1.0 / (3*T[0].length), 0.0, 0.5*Math.PI),
+      return new AnglePotential(new InfiniteWellFunction(1.0 / (3*T[0].length), 0.0, Math.PI),
                                 Util.facesToAngles(T), X);
    }
 
@@ -686,7 +686,7 @@ public final class Fields {
     */
    public static PotentialSum newStandardMeshPotential(int[][] faces, double[][] X) {
       IPotentialField Pa = newWellAnglePotential(faces, X);
-      IPotentialField Pe = newHarmonicEdgePotential(50.0, 2.0, Util.facesToEdges(faces), X);
+      IPotentialField Pe = newHarmonicEdgePotential(100.0, 2.0, Util.facesToEdges(faces), X);
       PotentialSum P = new PotentialSum(Pa, Pe);
       if (X.length == 2)
          P.addField(newHarmonicPerimeterPotential(1.0, 2.0, faces, X));

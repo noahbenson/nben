@@ -108,6 +108,22 @@ public abstract class ASimplexPotential implements IPotentialField {
    public final int[] simplicesPositionsOf(int u) {
       return (simplexPosition[u] == null? null : simplexPosition[u].clone());
    }
+
+   /** simplexMeasures(X) yields an array of the measurements of the simplices given a matrix of 
+    *  coordinate positions X. If X is null, then the reference measurements are yielded. This
+    *  function is largely included for debugging purposes; note that it overwrites the workspace
+    *  variable.
+    *
+    *  @param X a coordinate matrix at which to calculate the simplex measures
+    *  @return an array of simplex measurements; one per simplex
+    */
+   public final double[] simplexMeasures(double[][] X) {
+      if (X == null) return M0;
+      double[] M = new double[simplices[0].length];
+      for (int i = 0; i < M.length; ++i)
+         M[i] = calculateSimplex(i, X, this.workspace[i]);
+      return M;
+   }
    
 
    /** The member variable forms holds an array of IDifferentiatedFunction objects, each of which
@@ -158,7 +174,7 @@ public abstract class ASimplexPotential implements IPotentialField {
     *  classes purely for flexibility. It should otherwise be considered similar to the workspace
     *  variable.
     */
-   protected final double[] simplexPotential;
+   public final double[] simplexPotential;
 
    // these are for convenience/use with the edge worker classes below
    private final int[] allVertices;

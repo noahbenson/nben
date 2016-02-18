@@ -60,8 +60,8 @@ public class EdgePotential extends ASimplexPotential {
       double tmp, d = 0;
       for (j = 0; j < X.length; ++j) {
          tmp = X[j][simplices[1][e]] - X[j][simplices[0][e]];
-         G[0][j] = tmp;
-         G[1][j] = -tmp;
+         G[0][j] = -tmp;
+         G[1][j] = tmp;
          d += tmp*tmp;
       }
       d = Math.sqrt(d);

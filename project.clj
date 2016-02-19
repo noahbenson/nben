@@ -4,7 +4,16 @@
   :license {:name "GNU General Public License"
             :url "http://www.gnu.org/licenses/"}
   ;; dependencies
-  :dependencies [[org.clojure/clojure "1.7.0"]]
+  :dependencies [[org.clojure/clojure "1.7.0"]
+                 [org.clojure/core.incubator "0.1.3"]
+                 [criterium "0.4.3"] ;; for benchmarking (may remove in future)
+                 [org.clojure/data.priority-map "0.0.7"]
+                 [org.clojure/data.finger-tree "0.0.2"]
+                 [org.jordanlewis/data.union-find "0.1.0"]
+                 [org.clojure/data.int-map "0.2.0"]
+                 [me.raynes/fs "1.4.6"]
+                 [clj-time "0.10.0"]
+                 [potemkin "0.3.13"]]
   ;; location of source codes
   :source-paths ["src/main/clojure"]
   :java-source-paths ["src/main/java"]
@@ -13,7 +22,14 @@
   :target-path "target/"
   :compile-path "target/classes"
   ;; and the namespaces to aot compile
-  :aot [nben.math.graph]
+  :aot [nben.math.graph
+        nben.util.error
+        nben.util.typedef
+        nben.util.set
+        nben.util.iterator
+        nben.util.structured
+        nben.util.misc
+        nben.util]
   ;; targets that get cleaned...
   :clean-targets [:target-path :compile-path]
   ;; jar file options...
@@ -21,4 +37,5 @@
   :omit-source false
   :jar-exclusions [#"(?:^|/).svn/"]
   ;; And some options for the REPL...
-  :repl-options {:init (use '(nben.math graph))})
+  :repl-options {:init (do (use '(nben.math graph))
+                           (use 'nben.util))})

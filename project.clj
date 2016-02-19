@@ -1,9 +1,8 @@
 (defproject nben "0.1.0-SNAPSHOT"
-  :description (str "The nben library is a numberic and math library for clojure. I employ it in my"
-                    " research and encourage others to use it as well.")
+  :description (str "The nben library is a numberic and scientific toolkit for the JVM.")
   :url "http://github.com/NoahBenson/nben"
-  :license {:name "Eclipse Public License"
-            :url "http://www.eclipse.org/legal/epl-v10.html"}
+  :license {:name "GNU General Public License"
+            :url "http://www.gnu.org/licenses/"}
   ;; dependencies
   :dependencies [[org.clojure/clojure "1.7.0"]]
   ;; location of source codes
@@ -14,12 +13,7 @@
   :target-path "target/"
   :compile-path "target/classes"
   ;; and the namespaces to aot compile
-  :aot [nben.math.graph
-        ;nben.math.derivative
-        ;nben.math
-        ;nben.min.gradient-descent
-        ;nben.min
-        ]
+  :aot [nben.math.graph]
   ;; targets that get cleaned...
   :clean-targets [:target-path :compile-path]
   ;; jar file options...

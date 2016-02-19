@@ -321,20 +321,20 @@ public class Minimizer {
 
    ////////////////////////////////////////////////////////////////////////////////
    // The Step Functions
-   /** min.step(dt, ms, z) follows the gradient of its potential-field and configuration until it 
-    *  has either traveled for dt units of time or has taken ms steps in such a way that no vertex
-    *  ever moves more than distance z in a single step. 
+   /** min.step(dPE, ms, z) follows the gradient of its potential-field and configuration until it 
+    *  has either minimized the potential by the fraction dPE or has taken ms steps in such a way 
+    *  that no vertex ever moves more than distance z in a single step. 
     *  On error, an exception is thrown, most likely due to a problem with multi-threading.
     *
-    *  @param deltaT the maximum 'time' to travel (the maximum number of gradient-lengths to step)
+    *  @param deltaPE the maximum fraction of the potential to reduce
     *  @param maxSteps the maximum number of steps to take during the minimization
     *  @param z the maximum distance any single vertex should ever travel during a step
     *  @return a Report object detailing the minimization trajectory
     */
-   synchronized public Report step(double deltaT, int maxSteps, double z) throws Exception {
-      double t, t0, dt, dx, pe0, maxNorm;
+   synchronized public Report step(double deltaPE, int maxSteps, double z) throws Exception {
+      double t, t0, dt, dx, pe, pe0, maxNorm;
       int k = 0;
-      if (deltaT <= 0 || maxSteps < 1) return null;
+      if (deltaPE <= 0 || maxSteps < 1) return null;
       if (z <= 0) throw new IllegalArgumentException("parameter z to step must be > 0");
       // buffers in which we store gradient and gradient norms...
       double[][] grad     = new double[m_X.length][m_X[0].length];
@@ -357,14 +357,14 @@ public class Minimizer {
       // okay, iteratively take appropriately-sized steps...
       t = 0;
       pe0 = val.potential;
+      pe = pe0;
       Report re = new Report(pe0);
       try {
-         while (t < deltaT && k < maxSteps) {
+         while ((1.0 - pe/pe0) < deltaPE && k < maxSteps) {
             if (Numbers.zeroish(maxNorm))
                throw new Exception("gradient is effectively 0");
-            // pick our start step size; first would be z/maxNorm or timeLeft, whichever is smaller
+            // pick our start step size
             dt = z / maxNorm;
-            if (dt + t > deltaT) dt = deltaT - t;
             t0 = t;
             // see if the current step-size works; if not we'll halve it and try again...
             while (t0 == t) {
@@ -398,16 +398,16 @@ public class Minimizer {
                   maxNorm = norms[val.steepestVertex];
                   copyMatrix(Xbak, m_X, null);
                   // push this step onto the report...
-                  re.push(dt, val.gradientLength * dt, maxNorm, val.potential - pe0);
+                  re.push(dt, val.gradientLength * dt, maxNorm, val.potential - pe);
                   // update the time, total distance, and potential
                   t += dt;
-                  pe0 = val.potential;
+                  pe = val.potential;
                }
             }
          }
       } finally {
          // freeze the report and save it...
-         re.freeze(val == null? pe0 : val.potential);
+         re.freeze(val == null? pe : val.potential);
          report = re;
       }
       return re;
@@ -426,16 +426,16 @@ public class Minimizer {
     *  are updated more frequently than vertices with low gradients. Practically, this allows each
     *  step to get more done with less work.
     *
-    *  @param deltaT the maximum 'time' to travel (the maximum number of gradient-lengths to step)
+    *  @param deltaPE the maximum fraction of the potential to reduce
     *  @param maxSteps the maximum number of steps to take during the minimization
     *  @param z the maximum distance any single vertex should ever travel during a step
     *  @param partitions the number of partitions to divide the vertices into (should be small; i.e.
     *                    no more than ~13).
     *  @return a Report object detailing the minimization trajectory
     */
-   synchronized public Report nimbleStep(double deltaT, int maxSteps, double z, int partitions)
+   synchronized public Report nimbleStep(double deltaPE, int maxSteps, double z, int partitions)
       throws Exception {
-      double maxNorm, t, t0, dt, dt0, dx, pe0, peStep, dtStep;
+      double maxNorm, t, t0, dt, dt0, dx, pe, pe0, peStep, dtStep;
       int miniStepsPerStep = (1 << partitions);
       int k = 0;
       int miniStep, part;
@@ -443,7 +443,7 @@ public class Minimizer {
       // fields that get partitioned up
       IPotentialField[] fields = new IPotentialField[partitions];
       int[][] ss;
-      if (deltaT <= 0) return null;
+      if (deltaPE <= 0) return null;
       if (z <= 0) throw new IllegalArgumentException("parameter z to step must be > 0");
       // buffers in which we store gradient and gradient norms...
       double[][] grad     = new double[m_X.length][m_X[0].length];
@@ -464,17 +464,17 @@ public class Minimizer {
       // okay, iteratively take appropriately-sized overall-steps...
       maxNorm = norms[val.steepestVertex];
       pe0 = val.potential;
+      pe = pe0;
       dx = 0;
       t = 0;
       Report re = new Report(pe0);
       try {
-         while (t < deltaT && k++ < maxSteps) {
+         while ((1.0 - pe/pe0) < deltaPE && k++ < maxSteps) {
             if (Numbers.zeroish(maxNorm))
                throw new Exception("gradient is effectively 0");
             Arrays.fill(dtPart, 0);
-            // pick our start step size; first would be z/maxNorm or timeLeft, whichever is smaller
+            // pick our start step size
             dt0 = z / maxNorm;
-            if (dt0 + t > deltaT) dt0 = deltaT - t;
             t0 = t;
             // we want to make some substeps to run through...
             ss = substeps(norms, partitions);
@@ -528,12 +528,12 @@ public class Minimizer {
             dtStep = dtPart[partitions - 1];
             t += dtStep;
             val = currentPotential(grad, norms);
-            pe0 = val.potential;
-            re.push(dtStep, val.gradientLength * dtStep, maxNorm, valTmp.potential - pe0);
+            pe = val.potential;
+            re.push(dtStep, val.gradientLength * dtStep, maxNorm, valTmp.potential - pe);
             maxNorm = norms[val.steepestVertex];
          }
       } finally {
-         re.freeze(val == null? pe0 : val.potential);
+         re.freeze(val == null? pe : val.potential);
          report = re;
       }
       return re;

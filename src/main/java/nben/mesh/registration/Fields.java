@@ -673,24 +673,33 @@ public final class Fields {
       return newHarmonicPerimeterPotential(1.0, 2.0, faces, X);
    }
 
-   /** newStandardMeshPotential(faces, X0) yields a SumPotential that includes:
-    *    (a) an angle potential for the angles in the mesh [infinite-well: scale = 1/p, min = 0,
+   /** newStandardMeshPotential(Se, Sa, faces, X0) yields a SumPotential that includes:
+    *    (a) an angle potential for the angles in the mesh [infinite-well: scale = Sa/p, min = 0,
     *        max = pi/2, shape = 0.5]
-    *    (b) an edge potential for all edges in the given set of faces [harmonic: scale = 1/m, 
+    *    (b) an edge potential for all edges in the given set of faces [harmonic: scale = Se/m, 
     *        shape = 2]
     *
+    *  @param edgeScale (default: 500) the scale of the edge potential
+    *  @param angleScale (default: 1) the scale of the angle potential
     *  @param faces the triangle matrix of the mesh
     *  @param X the reference coordinate matrix for the mesh
     *  @return a PotentialSum object for the given mesh that maintains edges, angles, and perimeter
     *          positions
     */
-   public static PotentialSum newStandardMeshPotential(int[][] faces, double[][] X) {
+   public static PotentialSum newStandardMeshPotential(double edgeScale, double angleScale, 
+                                                       int[][] faces, double[][] X) {
       IPotentialField Pa = newWellAnglePotential(faces, X);
       IPotentialField Pe = newHarmonicEdgePotential(250.0, 2.0, Util.facesToEdges(faces), X);
       PotentialSum P = new PotentialSum(Pa, Pe);
       if (X.length == 2)
          P.addField(newHarmonicPerimeterPotential(1.0, 2.0, faces, X));
       return P;
+   }
+   public static PotentialSum newStandardMeshPotential(double edgeScale, int[][] faces, double[][] X) {
+      return newStandardMeshPotential(edgeScale, 1.0, faces, X);
+   }
+   public static PotentialSum newStandardMeshPotential(int[][] faces, double[][] X) {
+      return newStandardMeshPotential(500.0, 1.0, faces, X);
    }
 
    /** newSum(fields) yields a new potential field object that is the sum of the given lsit of

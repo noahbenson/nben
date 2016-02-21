@@ -42,5 +42,3 @@
   `(potemkin/import-vars [~namespace ~@(filter (comp filt clojure.core/name)
                                                (map key (ns-publics (the-ns namespace))))])))
 
-;; #clock ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn clock "(clock) yields the system clock time in milliseconds." [] (System/currentTimeMillis))

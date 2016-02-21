@@ -13,6 +13,7 @@
                  [org.clojure/data.int-map "0.2.0"]
                  [me.raynes/fs "1.4.6"]
                  [clj-time "0.10.0"]
+                 [smee/binary "0.5.1"]
                  [potemkin "0.3.13"]]
   ;; location of source codes
   :source-paths ["src/main/clojure"]
@@ -29,7 +30,8 @@
         nben.util.iterator
         nben.util.structured
         nben.util.misc
-        nben.util]
+        nben.util
+        nben.sys]
   ;; targets that get cleaned...
   :clean-targets [:target-path :compile-path]
   ;; jar file options...
@@ -38,4 +40,5 @@
   :jar-exclusions [#"(?:^|/).svn/"]
   ;; And some options for the REPL...
   :repl-options {:init (do (use '(nben.math graph))
-                           (use 'nben.util))})
+                           (use 'nben.util)
+                           (require '[nben.sys :as sys]))})

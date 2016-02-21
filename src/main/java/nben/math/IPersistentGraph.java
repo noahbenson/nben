@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// IPersistentGraph.java, part of nben, a mathematics library for clojure.
+// IPersistentGraph.java, part of nben, a mathematics library for the JVM.
 // This file defines the persistent graph interface.
 // 
-// Copyright (C) 2012 Noah C. Benson
+// Copyright (C) 2012-2016 Noah C. Benson
 //
 // This file is part of the nben clojure library.
 //
@@ -18,7 +18,8 @@
 // library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package nben.jvm;
+package nben.math;
+
 import clojure.lang.IPersistentCollection;
 import clojure.lang.IPersistentMap;
 

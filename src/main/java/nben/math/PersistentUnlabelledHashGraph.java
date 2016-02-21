@@ -1,9 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// PersistentUnlabelledHashGraph.java, part of nben, a mathematics library for clojure.
+// PersistentUnlabelledHashGraph.java, part of nben, a mathematics library for JVM.
 // This file defines the persistent unlabelled graph implementation using clojure's persistent 
 // hash maps.
 // 
-// Copyright (C) 2012 Noah C. Benson
+// Copyright (C) 2012-2016 Noah C. Benson
 //
 // This file is part of the nben clojure library.
 //
@@ -19,7 +19,10 @@
 // library.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-package nben.jvm;
+package nben.math;
+
+import nben.math.IPersistentGraph;
+
 import clojure.lang.*;
 import java.util.*;
 import java.io.Serializable;

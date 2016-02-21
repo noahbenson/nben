@@ -22,7 +22,7 @@
 (ns nben.util
   (:refer-clojure :exclude [second parents extend name minus])
   
-  (:use [potemkin :exclude [def-map-type]])
+  (:use [potemkin :exclude [def-map-type import-fn]])
 
   (:require nben.util.error)
   (:require nben.util.typedef)
@@ -30,28 +30,32 @@
   (:require nben.util.iterator)
   (:require nben.util.structured)
   (:require nben.util.misc)
-  
+
+  (:require clojure.string)
   (:require clojure.data.priority-map)
   (:require clojure.data.finger-tree)
-  (:require jordanlewis.data.union-find)
-  
-  (:require [clj-time.core :as clj-time-core])
-  (:require [clj-time.coerce :as clj-time-coerce])
-  (:require [clj-time.local :as clj-time-local])
-  (:require [clj-time.periodic :as clj-time-periodic])
-  (:require [clj-time.predicates :as clj-time-predicates])
-
-  (:require [me.raynes.fs :as fs])
-  (:require [clojure.java.io :as io]))
+  (:require jordanlewis.data.union-find))
 
 ;; Import the misc. utilities so that we have import-all-vars.
 (nben.util.misc/import-all-vars nben.util.misc)
 
 ;; --> potemkin ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(import-vars [potemkin def-map-type])
+(import-vars [potemkin def-map-type import-fn])
 
 ;; --> incubator ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (import-vars [clojure.core.incubator seqable? dissoc-in])
+
+;; --> string ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(import-vars [clojure.string capitalize lower-case re-quote-replacement split-lines trim
+                             trim-newline triml trimr upper-case])
+(import-fn clojure.string/blank?        whitespace?)
+(import-fn clojure.string/escape        string-escape)
+(import-fn clojure.string/join          string-join)
+(import-fn clojure.string/replace       string-replace)
+(import-fn clojure.string/replace-first string-replace-first)
+(import-fn clojure.string/reverse       string-reverse)
+(import-fn clojure.string/split         string-split)
+
 
 ;; --> priority-map ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (import-vars [clojure.data.priority-map priority-map priority-map-by])
@@ -87,29 +91,4 @@
 
 ;; --> structured ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (import-all-vars nben.util.structured)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; All the below is system inclusions
-
-;; --> time ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(import-all-vars clj-time.core :exclude [second extend minus plus])
-;; we rename second to seconds, extend to lengthen, and minus to earlier
-(import-fn clj-time-core/second seconds)
-(import-fn clj-time-core/minus earlier)
-(import-fn clj-time-core/plus later)
-(import-fn clj-time-core/extend lengthen)
-;; local, periodic, and predicates don't seem to cause problems
-(import-all-vars clj-time.local)
-(import-all-vars clj-time.periodic)
-(import-all-vars clj-time.predicates)
-;; the coerce symbols we rename
-(import-fn clj-time-coerce/to-long date-time->long)
-(import-fn clj-time-coerce/from-long long->date-time)
-
-;; --> file system ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(import-all-vars me.raynes.fs :exclude [name parents walk])
-(import-fn fs/name path-name)
-(import-fn fs/parents path-parents)
-(import-fn fs/walk path-walk)
-(import-all-vars clojure.java.io :exclude [copy file])
 

@@ -19,9 +19,9 @@
 ;;
 
 (ns nben.math.graph
-  (:import nben.jvm.IPersistentGraph nben.jvm.PersistentLabelledHashGraph
-           nben.jvm.PersistentUnlabelledHashGraph)
-  (:use clojure.set))
+  (:use nben.util)
+  (:import nben.math.IPersistentGraph nben.math.PersistentLabelledHashGraph
+           nben.math.PersistentUnlabelledHashGraph))
 
 ;; just for internal error use
 (defn- argerr [txt] (throw (IllegalArgumentException. txt)))
@@ -50,19 +50,19 @@
   [obj] (if (instance? PersistentUnlabelledHashGraph obj) true false))
 
 (defn labelled-graph
-  {:tag nben.jvm.IPersistentGraph
+  {:tag nben.math.IPersistentGraph
    :doc "Creates and returns a labelled IPersistentGraph from the key/value pairs provided"
    :static true
    :author "Noah C. Benson"
    :added "1.0"}
-  [& keyvals] (nben.jvm.PersistentLabelledHashGraph/create keyvals))
+  [& keyvals] (nben.math.PersistentLabelledHashGraph/create keyvals))
 (defn unlabelled-graph
-  {:tag nben.jvm.IPersistentGraph
+  {:tag nben.math.IPersistentGraph
    :doc "Creates and returns an unlabelled IPersistentGraph from the objects provided"
    :static true
    :author "Noah C. Benson"
    :added "1.0"}
-  [& more] (nben.jvm.PersistentUnlabelledHashGraph/create more))
+  [& more] (nben.math.PersistentUnlabelledHashGraph/create more))
 
 (defn vertices
   {:doc (str "Returns a persistent collection of all vertices in the graph; labelled graphs return"

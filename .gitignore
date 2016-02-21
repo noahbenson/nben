@@ -1,4 +1,6 @@
 *.class
 target/classes
 target/stale
+target/repl-port
+.nrepl-port
 .lein-repl-history

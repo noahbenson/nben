@@ -14,6 +14,7 @@
                  [me.raynes/fs "1.4.6"]
                  [clj-time "0.10.0"]
                  [smee/binary "0.5.1"]
+                 [net.mikera/core.matrix "0.49.0"]
                  [potemkin "0.3.13"]]
   ;; location of source codes
   :source-paths ["src/main/clojure"]
@@ -39,6 +40,7 @@
   :omit-source false
   :jar-exclusions [#"(?:^|/).svn/"]
   ;; And some options for the REPL...
-  :repl-options {:init (do (use '(nben.math graph))
-                           (use 'nben.util)
-                           (require '[nben.sys :as sys]))})
+  :repl-options {:init (do (refer-clojure :exclude '[* - + == / < <= > >= not= = min max])
+                           (require '[clojure.core.matrix :refer :all]
+                                    '[clojure.core.matrix.operators :refer :all])
+                           (use '[nben util sys]))})

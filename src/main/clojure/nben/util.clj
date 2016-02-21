@@ -36,6 +36,7 @@
   (:require clojure.data.finger-tree)
   (:require jordanlewis.data.union-find))
 
+
 ;; Import the misc. utilities so that we have import-all-vars.
 (nben.util.misc/import-all-vars nben.util.misc)
 
@@ -79,11 +80,12 @@
 (import-vars [nben.util.error arg-err state-err arithmetic-err unsupported-err arity-err])
 
 ;; --> typedef ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(import-vars [nben.util.typedef def-set-type def-vec-type])
+(import-vars [nben.util.typedef def-set-type def-vec-type defmultipro])
 
 ;; --> set ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (import-vars [nben.util.set key-set entry-set range-set union isect map-union map-isect set-union 
                            set-isect outer])
+(import-vars [clojure.set map-invert])
 
 ;; --> iterator ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (import-vars [nben.util.iterator iterator for-all? for-any? for-none? for-not-all? build sum

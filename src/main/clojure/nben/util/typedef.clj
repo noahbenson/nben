@@ -20,7 +20,7 @@
 
 (ns nben.util.typedef
   (:use [potemkin :exclude [def-map-type]])
-  (:use nben.util.error))
+  (:use [nben.util error]))
 
 (import-vars [potemkin def-map-type])
 (defmacro def-set-type
@@ -352,3 +352,52 @@
        (toString [~self] (clojure.lang.RT/printString ~self))
 
        ~@remainder)))
+
+(defmacro defmultipro
+  "The defmultipro macro is similar to both the defmulti and the defprotocol macros. The motivation
+   of the macro is to make it simpler to provide default behavior for a protocol depending on an
+   abstract feature of the first argument to the methods. The syntax for defmultipro is:
+     * (defmultipro protocol-name doc-string? triage-fn impl-fn method-signatures...)
+   This is exactly like the defprotocol macro except for the addition of the triage-fn and the
+   impl-fn arguments. With a defmultipro protocol, whenenver an object is passed to any of its
+   methods, it is run through the triage-fn, the result of which is passed to the impl-fn, which
+   must return a map of method mappings appropriate for the extend macro. All objects of a
+   particular class will only be triaged once, the first time any of them are triaged; after that
+   point, the protocol will be implemented directly.
+
+   Examples:
+     (defmultipro abstract-dictionary
+       #(cond (map? %) :map, (set? %) :set, (vector? %) :vec)
+       {:map {:abstract-dictionary? (fn [_] true), :lookup get}
+        :set {:abstract-dictionary? (fn [_] true), :lookup get}
+        :vec {:abstract-dictionary? (fn [_] true), :lookup nth}
+        nil  {:abstract-dictionary? (fn [_] false), :lookup (fn [_ _] nil)}}
+       (abstract-dictionary? [_] \"yields true if the object is an abstract dictionary\")
+       (lookup [_ k] \"yields the val associated with k or nil\"))"
+  [protocol-name & args]
+  (let [[docstr triage-fn impl-fn & methods] (if (string? (first args)) args (cons nil args))
+        triage-sym (gensym)]
+    `(let [triage-fn# ~triage-fn
+           impl-fn#   ~impl-fn]
+       (defprotocol ~protocol-name
+         ~@(when docstr [docstr])
+         ~@methods)
+       (letfn [(~triage-sym [obj# fn-name# args#]
+                 (if (identical? (class obj#) Object)
+                   (if-let [objfns# (impl-fn# Object)]
+                     (apply (fn-name# objfns#) obj# args#)
+                     (arg-err "multi-pro protocol " ~protocol-name
+                              " not implemented for class Object"))
+                   (if-let [impl-map# (impl-fn# (triage-fn# obj#))]
+                     (do (extend (class obj#) ~protocol-name impl-map#)
+                         (apply (get impl-map# fn-name#) obj# args#))
+                     (arg-err "multi-pro protocol " ~protocol-name
+                              " not implemented for class " (class obj#)))))]
+         (extend Object
+           ~protocol-name
+           ~(reduce (fn [m mth]
+                      (let [nm (keyword (first mth))]
+                        (assoc m nm `(fn [obj# & more#] (~triage-sym obj# ~nm more#)))))
+                    {}
+                    methods))))))
+

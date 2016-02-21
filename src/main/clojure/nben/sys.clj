@@ -116,31 +116,31 @@
 (defmethod export-stream :default [s o f opts] (arg-err "Unimplemented format: " f))
 
 ;; #import ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn import
-  "(import file) imports the given file by auto-detecting its file type according to extension (see
-     also: file-format-of).
-   (import file type) imports the given file according to the given type, which may be a vector
+(defn import-file
+  "(import-file file) imports the given file by auto-detecting its file type according to extension
+     (see also: file-format-of).
+   (import-file file type) imports the given file according to the given type, which may be a vector
      beginning with a type and followed by arguments to the type.
      Options may be passed after type; these are bundled and given to the importer.
 
    In order to register import and export types, see the import-stream and export-stream functions."
-  ([fl] (import fl nil))
+  ([fl] (import-file fl nil))
   ([fl fmt & {:as opts}]
      (let [fmt (or fmt (file-format-of fl) (arg-err "cannot determine format of file " fl))]
        (with-open [s (io/input-stream fl)]
          (import-stream s fmt opts)))))
 
 ;; #export ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn export
-  "(export file obj) exports the given file by auto-detecting its file type according to extension 
-     and the contents of obj (see also: file-format-of). The object type is only used when the file
-     extension does not yield an obvious match (see auto-file-format).
-   (export file obj type) exports the given object to the given file according to the given format
-     type, which may be a vector beginning with a type and followed by arguments to the type.
+(defn export-file
+  "(export-file file obj) exports the given file by auto-detecting its file type according to
+     extension and the contents of obj (see also: file-format-of). The object type is only used when
+      the file extension does not yield an obvious match (see auto-file-format).
+   (export-file file obj type) exports the given object to the given file according to the given
+     format type, which may be a vector beginning with a type and followed by arguments to the type.
      Options may be passed after type; these are bundled and given to the exporter.
 
    In order to register export and export types, see the import-stream and export-stream functions."
-  ([fl obj] (export fl obj nil))
+  ([fl obj] (export-file fl obj nil))
   ([fl obj fmt & {:as opts}]
      (let [fmt (or fmt (file-format-of fl) (auto-file-format obj)
                    (arg-err "cannot determine format of file " fl))]

@@ -688,18 +688,19 @@ public final class Fields {
     */
    public static PotentialSum newStandardMeshPotential(double edgeScale, double angleScale, 
                                                        int[][] faces, double[][] X) {
-      IPotentialField Pa = newWellAnglePotential(faces, X);
-      IPotentialField Pe = newHarmonicEdgePotential(250.0, 2.0, Util.facesToEdges(faces), X);
+      IPotentialField Pa = newWellAnglePotential(angleScale, faces, X);
+      IPotentialField Pe = newHarmonicEdgePotential(edgeScale, Util.facesToEdges(faces), X);
       PotentialSum P = new PotentialSum(Pa, Pe);
       if (X.length == 2)
          P.addField(newHarmonicPerimeterPotential(1.0, 2.0, faces, X));
       return P;
    }
-   public static PotentialSum newStandardMeshPotential(double edgeScale, int[][] faces, double[][] X) {
+   public static PotentialSum newStandardMeshPotential(double edgeScale, 
+                                                       int[][] faces, double[][] X) {
       return newStandardMeshPotential(edgeScale, 1.0, faces, X);
    }
    public static PotentialSum newStandardMeshPotential(int[][] faces, double[][] X) {
-      return newStandardMeshPotential(500.0, 1.0, faces, X);
+      return newStandardMeshPotential(250.0, 1.0, faces, X);
    }
 
    /** newSum(fields) yields a new potential field object that is the sum of the given lsit of

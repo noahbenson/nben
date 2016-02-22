@@ -679,7 +679,7 @@ public final class Fields {
     *    (b) an edge potential for all edges in the given set of faces [harmonic: scale = Se/m, 
     *        shape = 2]
     *
-    *  @param edgeScale (default: 500) the scale of the edge potential
+    *  @param edgeScale (default: 250) the scale of the edge potential
     *  @param angleScale (default: 1) the scale of the angle potential
     *  @param faces the triangle matrix of the mesh
     *  @param X the reference coordinate matrix for the mesh

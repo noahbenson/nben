@@ -378,7 +378,7 @@ public class Minimizer {
                // see if this was a valid step...
                if (Double.isNaN(valTmp.potential)) {
                   throw new IllegalStateException("Potential function yielded NaN");
-               } else if (Double.isInfinite(valTmp.potential) || valTmp.potential >= pe0) {
+               } else if (Double.isInfinite(valTmp.potential) || valTmp.potential >= pe) {
                   // we broke a triangle or we failed to reduce potential (perhaps due to a 
                   // too-large step-size); swap x0 back to x and grad0 back to grad and try with a
                   // smaller step

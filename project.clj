@@ -1,5 +1,5 @@
 (defproject nben "0.1.0-SNAPSHOT"
-  :description "The nben library is a numberic and scientific toolkit for the JVM."
+  :description "The nben library is a numeric and scientific toolkit for the JVM."
   :url "http://github.com/NoahBenson/nben"
   :license {:name "GNU General Public License"
             :url "http://www.gnu.org/licenses/"}
@@ -37,6 +37,8 @@
   :clean-targets [:target-path :compile-path]
   ;; jar file options...
   :jar-name "nben.jar"
+  ;; uberjar...
+  :uberjar-name "nben-standalone.jar"
   :omit-source false
   :jar-exclusions [#"(?:^|/).svn/"]
   ;; And some options for the REPL...

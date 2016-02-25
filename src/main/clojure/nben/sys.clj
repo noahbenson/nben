@@ -29,7 +29,7 @@
   (:require [clj-time.periodic :as clj-time-periodic])
   (:require [clj-time.predicates :as clj-time-predicates])
 
-  (:require [org.clojars.smee.binary.core :as smee])
+  ;(:require [org.clojars.smee.binary.core :as smee])
 
   (:require [me.raynes.fs :as fs])
   (:require [clojure.java.io :as io]))

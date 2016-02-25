@@ -12,6 +12,17 @@ the Java Virtual Machine. It is written primarily in
 [Clojure](https://clojure.org/) and [Java](https://www.java.com/), though there
 are some [Scala](http://www.scala-lang.org/) modules planned as well. 
 
+## Installation ################################################################
+
+This github repository contains the file nben-standalone.jar, which should be
+easy to use simply by placing it on your classpath. However, the project is
+designed for use with [leiningen](http://leiningen.org/) and is available
+[here](https://clojars.org/nben) on [clojars](https://clojars.org/).  To include
+the nben library as a dependency in leiningen, simply add the following line to
+the dependency list in your project.clj file:
+
+    [nben "0.1.0-SNAPSHOT"]
+
 ## Contents ####################################################################
 
 This library currently contains the following modules:

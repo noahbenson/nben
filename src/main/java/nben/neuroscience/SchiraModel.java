@@ -42,7 +42,6 @@ public class SchiraModel {
    public final double lambda;
    public final double psi;
    public final double v1Size;
-   public final double v1Size;
    public final double v2Size;
    public final double v3Size;
    public final double hv4Size;
@@ -122,18 +121,18 @@ public class SchiraModel {
    }
 
    // method for rotation/translation/shear
-   private final static void finalTx(double[] z) {
+   private final void finalTx(double[] z) {
       double x, y;
       // center the point...
       x = z[0] - FC0;
       // flip the z so that it matches LH...
       y = -z[1];
-      // rotate...
-      z[0] = x*cosPsi - y*sinPsi;
-      z[1] = x*sinPsi + y*cosPsi;
       // shear...
-      x = z[0] + xShear*z[1];
-      y = yShear*z[0] + z[1];
+      z[0] = x + xShear*y;
+      z[1] = yShear*x + y;
+      // rotate...
+      x = z[0]*cosPsi - z[1]*sinPsi;
+      y = z[0]*sinPsi + z[1]*cosPsi;
       // scale and re-center...
       z[0] = xFC + xScale*x;
       z[1] = yFC + yScale*y;
@@ -173,11 +172,12 @@ public class SchiraModel {
             xy[i][0] = Math.log(A/B);
             xy[i][1] = 0.0;
          } else {
+            numr = sech(argz);
             numth = argz * Math.pow(
-              sech(argz),
+              numr,
               DOUBLE_SECH_PARAM1 * sech(DOUBLE_SECH_PARAM2*Math.log(absz / A)));
             divth = argz * Math.pow(
-              sech(argz),
+              numr,
               DOUBLE_SECH_PARAM1 * sech(DOUBLE_SECH_PARAM2*Math.log(absz / B)));
             numr = A + absz * Math.cos(numth);
             divr = B + absz * Math.cos(divth);
@@ -204,7 +204,7 @@ public class SchiraModel {
          throw new IllegalArgumentException("arrays given to angleToCortex must be equally-sized");
       double[][][] res = new double[thetas.length][][];
       for (int i = 0; i < thetas.length; ++i)
-         res[i] = angleToCortex[thetas[i], rhos[i]);
+         res[i] = angleToCortex(thetas[i], rhos[i]);
       return res;
    }
    /** model.angleToCortex(angles) yields an n-length double array q, each of whose elements, q[i],

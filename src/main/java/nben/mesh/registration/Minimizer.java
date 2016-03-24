@@ -361,8 +361,11 @@ public class Minimizer {
       Report re = new Report(pe0);
       try {
          while ((1.0 - pe/pe0) < deltaPE && k < maxSteps) {
-            if (Numbers.zeroish(maxNorm))
-               throw new Exception("gradient is effectively 0");
+            if (Numbers.zeroish(maxNorm)) {
+               // this isn't really an error; we've arrived at a local minimum or saddle point
+               //throw new Exception("gradient is effectively 0");
+               break;
+            }
             // pick our start step size
             dt = z / maxNorm;
             t0 = t;

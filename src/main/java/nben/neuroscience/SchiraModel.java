@@ -23,7 +23,7 @@
 package nben.neuroscience;
 
 import nben.util.Par;
-import nben.util.Numbers;
+import nben.util.Num;
 
 import java.util.Arrays;
 
@@ -246,7 +246,7 @@ public class SchiraModel {
    // it converts {theta, rho} into {x, y}.
    private final void layerlessTx(double[] xy) {
       double absz = Math.sqrt(xy[0]*xy[0] + xy[1]*xy[1]);
-      if (Numbers.zeroish(absz)) {
+      if (Num.zeroish(absz)) {
          xy[0] = Math.log(A/B);
          xy[1] = 0.0;
       } else {
@@ -278,7 +278,7 @@ public class SchiraModel {
    }
    private final void layerlessRx(double[] xy) {
       double absz, argz, rz, iz;
-      if (Numbers.zeroish(xy[1]) && xy[0] == Math.log(A/B)) {
+      if (Num.zeroish(xy[1]) && xy[0] == Math.log(A/B)) {
          xy[0] = 0;
          xy[1] = 0;
       } else {
@@ -362,7 +362,7 @@ public class SchiraModel {
       // first, the layerless part...
       double zz = visualToMath(theta) * 2.0 / Math.PI;
       double abszz = Math.abs(zz);
-      double sgn = (Numbers.zeroish(zz)? 1.0 : Math.signum(zz));
+      double sgn = (Num.zeroish(zz)? 1.0 : Math.signum(zz));
       rho = Math.abs(rho);
       // layered part...
       double[] layers = new double[5];
@@ -430,8 +430,8 @@ public class SchiraModel {
       double[] tra = new double[3];
       double zz = xy[0];
       double abszz = Math.abs(zz);
-      double sgn = (Numbers.zeroish(zz)? 1.0 : Math.signum(zz));
-      if (Numbers.zeroish(abszz - v1Size)) {
+      double sgn = (Num.zeroish(zz)? 1.0 : Math.signum(zz));
+      if (Num.zeroish(abszz - v1Size)) {
          // V1-V2 Border
          tra[0] = sgn;
          tra[2] = 1.5;
@@ -439,7 +439,7 @@ public class SchiraModel {
          // Inside V1
          tra[0] = zz/v1Size;
          tra[2] = 1.0;
-      } else if (Numbers.zeroish(abszz - v2Bound)) {
+      } else if (Num.zeroish(abszz - v2Bound)) {
          // V2/V3 boundary
          tra[0] = 0;
          tra[2] = 2.5;
@@ -447,7 +447,7 @@ public class SchiraModel {
          // Inside V2
          tra[0] = sgn*(1.0 - (abszz - v1Size)/v2Size);
          tra[2] = 2.0;
-      } else if (Numbers.zeroish(abszz - v3Bound)) {
+      } else if (Num.zeroish(abszz - v3Bound)) {
          // V3/V4 border
          tra[0] = sgn;
          tra[2] = 3.5;

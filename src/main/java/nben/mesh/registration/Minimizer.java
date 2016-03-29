@@ -26,7 +26,7 @@ import nben.mesh.registration.IPotentialField;
 import nben.mesh.registration.PotentialValue;
 
 import nben.util.Par;
-import nben.util.Numbers;
+import nben.util.Num;
 
 import java.util.Arrays;
 
@@ -361,7 +361,7 @@ public class Minimizer {
       Report re = new Report(pe0);
       try {
          while ((1.0 - pe/pe0) < deltaPE && k < maxSteps) {
-            if (Numbers.zeroish(maxNorm)) {
+            if (Num.zeroish(maxNorm)) {
                // this isn't really an error; we've arrived at a local minimum or saddle point
                //throw new Exception("gradient is effectively 0");
                break;
@@ -372,7 +372,7 @@ public class Minimizer {
             // see if the current step-size works; if not we'll halve it and try again...
             while (t0 == t) {
                // make sure we aren't below a threshold...
-               if (Numbers.zeroish(dt)) throw new Exception("Step-size decreased to effectively 0");
+               if (Num.zeroish(dt)) throw new Exception("Step-size decreased to effectively 0");
                // take a step; this copies the current coordinates (m_X) into m_X0; same for grad
                takeStep(m_X, dt, grad, null);
                // now, get the new potential value...
@@ -473,7 +473,7 @@ public class Minimizer {
       Report re = new Report(pe0);
       try {
          while ((1.0 - pe/pe0) < deltaPE && k++ < maxSteps) {
-            if (Numbers.zeroish(maxNorm))
+            if (Num.zeroish(maxNorm))
                throw new Exception("gradient is effectively 0");
             Arrays.fill(dtPart, 0);
             // pick our start step size
@@ -494,7 +494,7 @@ public class Minimizer {
                   clearGradient(grad, ss[part]);
                   valTmp = new PotentialValue(fields[part], ss[part], m_X, grad, norms);
                   // also skip this part if the gradient is basically 0
-                  if (Numbers.zeroish(valTmp.gradientLength)) continue;
+                  if (Num.zeroish(valTmp.gradientLength)) continue;
                   // we always start with this stepsize, scaled up based on partition number...
                   dt = dt0 * (1 << part);
                   // see if the current step-size works; if not we'll halve it and try again...
@@ -502,7 +502,7 @@ public class Minimizer {
                   cont = true;
                   while (cont) {
                      // make sure we aren't below a threshold...
-                     if (Numbers.zeroish(dt))
+                     if (Num.zeroish(dt))
                         throw new Exception("Step-size decreased to effectively 0");
                      // take a single step...
                      takeStep(m_X, dt, grad, ss[part]);

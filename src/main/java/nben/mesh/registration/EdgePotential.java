@@ -25,7 +25,7 @@ package nben.mesh.registration;
 import nben.mesh.registration.IPotentialField;
 import nben.mesh.registration.ASimplexPotential;
 
-import nben.util.Numbers;
+import nben.util.Num;
 
 /** The EdgePotential class defines the code that computates of potential fields based on the
  *  interactions between neighboring vertices in the mesh. To construct an EdgePotential, one must
@@ -65,7 +65,7 @@ public class EdgePotential extends ASimplexPotential {
          d += tmp*tmp;
       }
       d = Math.sqrt(d);
-      if (!Numbers.zeroish(d)) {
+      if (!Num.zeroish(d)) {
          for (j = 0; j < X.length; ++j) {
             G[0][j] /= d;
             G[1][j] /= d;

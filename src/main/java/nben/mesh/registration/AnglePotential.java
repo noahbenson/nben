@@ -26,7 +26,7 @@ import nben.mesh.registration.IPotentialField;
 import nben.mesh.registration.ASimplexPotential;
 import nben.mesh.registration.IDifferentiatedFunction;
 
-import nben.util.Numbers;
+import nben.util.Num;
 
 /** The AnglePotential class defines the code computations of potential fields based on the
  *  interactions between triples of neighboring vertices in the mesh. To construct an 
@@ -80,12 +80,12 @@ public class AnglePotential extends ASimplexPotential {
          nAB[0] /= dAB;
          nAB[1] /= dAB;
          nAB[2] /= dAB;
-         double[] axisY = Numbers.cross(axisZ, nAB);
+         double[] axisY = Num.cross(axisZ, nAB);
          tmp = Math.sqrt(axisY[0]*axisY[0] + axisY[1]*axisY[1] + axisY[2]*axisY[2]);
          axisY[0] /= tmp;
          axisY[1] /= tmp;
          axisY[2] /= tmp;
-         double[] axisX = Numbers.cross(axisY, axisZ);
+         double[] axisX = Num.cross(axisY, axisZ);
          // now we can get the 2D coordinates out...
          nAC[0] = X[0][C] - X[0][A];
          nAC[1] = X[1][C] - X[1][A];

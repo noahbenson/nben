@@ -27,7 +27,6 @@ import nben.mesh.registration.IPotentialField;
 import nben.mesh.registration.IDifferentiatedFunction;
 
 import nben.util.Par;
-import nben.util.Numbers;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;

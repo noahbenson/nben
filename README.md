@@ -34,6 +34,8 @@ This library currently contains the following modules:
    surface meshes, it is by no means limited or even specific to them.
 2. **nben.math**: This namespace is currently an under-development numerical
    interface for clojure. 
+3. **nben.geometry.spherical**: Tools for performing basic calculations on the
+   surface of a unit sphere; this is intended for use with spherical meshes.
 
 This library is in its early stages; expect it to change rapidly.
 

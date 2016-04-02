@@ -21,7 +21,6 @@
 package nben.geometry.spherical;
 
 import nben.util.Num;
-import nben.geometry.spherical.Point;
 
 /** A GreatCircle object stores information about a great circle on the surface of a sphere.
  *
@@ -32,6 +31,53 @@ public class GreatCircle {
    public final Point A;
    /** The second of two points on the great circle. */
    public final Point B;
+
+   /** g.normal() yields the normal vector, as a Point, to the plane of the great circle g. */
+   public final Point normal() {
+      return Point._from(Num.cross(A.coords, B.coords));
+   }
+
+   /** g.contains(p) yields true if the great circle g contaings the point p. */
+   public final boolean contains(Point p) {
+      double[] cp = Num.cross(p.coords, A.coords);
+      double dp = Num.dot(Num.cross(A.coords, B.coords), cp);
+      if (Num.zeroish(dp)) return Num.eq(p.coords, A.coords);
+      else return Num.eq(1.0, Math.abs(dp));
+   }
+   /** g.contains(a) yields true if the great circle g contains the arc a. */
+   public final boolean contains(Arc a) {
+      return Num.eq(1.0, Math.abs(Num.dot(normal().coords, a.normal().coords)));
+   }
+
+   /** g.intersectionPoint(c) yields the intersection point of great circles g and c or null if they
+    *  do not intersect at a point. Note that if g.equals(c) is trie, then this will yield null.
+    */
+   public final Point intersectionPoint(GreatCircle c) {
+      double[] n1 = normal().coords;
+      double[] n2 = c.normal().coords;
+      double[] cx = Num.cross(n1, n2);
+      if (Num.zeroish(Num.norm2(cx))) return null;
+      else return Point._from(cx);
+   }
+   /** g.intersectionPoint(a) yields the intersection point of great circles g and arc a or null if
+    *  they do not intersect at a point. Note that if the arc lies on the great circle, then null is
+    *  yielded (check instead g.contains(a)).
+    */
+   public final Point intersectionPoint(Arc a) {
+      double[] n1 = normal().coords;
+      double[] n2 = a.normal().coords;
+      double[] cx = Num.cross(n1, n2);
+      if (Num.zeroish(Num.norm2(cx))) return null;
+      else {
+         Point p = Point._from(cx);
+         if (a.contains(p)) return p;
+         else {
+            p = p.antipodal();
+            if (a.contains(p)) return p;
+            else return null;
+         }
+      }
+   }
 
    /** Constructs a GreatCircle object from a coordinate matrix and indices of the two points;
     *  this is private, as the static from() function should be used to construct a great
@@ -130,5 +176,15 @@ public class GreatCircle {
       Point R = Point.from(new double[] {Q.coords[0] + 1.0, Q.coords[1], Q.coords[2]});
       Point S = Point._from(Num.cross(R.coords, Q.coords));
       return new GreatCircle(R, S);
+   }
+
+   /** g.equals(h) yields true if h and g are equivalent great circles. */
+   public boolean equals(Object o) {
+      if (o instanceof GreatCircle)
+         return Num.eq(
+            1.0,
+            Math.abs(Num.dot(((GreatCircle)o).normal().coords, normal().coords)));
+      else
+         return false;
    }
 }

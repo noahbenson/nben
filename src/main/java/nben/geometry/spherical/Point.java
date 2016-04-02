@@ -111,4 +111,21 @@ public class Point {
    public static final Point _from(double[] _coords) {
       return new Point(_coords);
    }
+   /** Point.from(x,y,z) is equivalent to Point.from(new double[] {x,y,z}). */
+   public static final Point from(double x, double y, double z) {
+      return Point.from(new double[] {x, y, z});
+   }   
+   /** Point._from(x,y,z) is equivalent to Point._from(new double[] {x,y,z}). */
+   public static final Point _from(double x, double y, double z) {
+      return Point._from(new double[] {x, y, z});
+   }
+
+   /** p.equal(q) uses the Num.zeroish function to test for identity between points. */
+   public boolean equals(Object o) {
+      if (o instanceof Point) return Num.eq(((Point)o).coords, coords);
+      else                    return false;
+   }
+   public boolean equals(Point p) {
+      return Num.eq(p.coords, coords);
+   }
 }

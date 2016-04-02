@@ -697,4 +697,27 @@ public final class Num {
    public static final double[][] alignment_matrix_3d(double[] u, double[] v) {
       return _alignment_matrix_3d(normalized(u), normalized(v));
    }
+
+   /** Num.range(k) yields an array of the numbers 0 to k-1. Num.range(0) yields a 0-length array,
+    *  while Num.range(q) for q less than 0 yields null.
+    */
+   public static final int[] range(int k) {
+      if (k < 0)
+         return null;
+      int[] res = new int[k];
+      for (int i = 0; i < k; ++i)
+         res[i] = i;
+      return res;
+   }
+   /** Num.range(s, k) yields an array of the numbers s to k-1. Num.range(s, s) yields a 0-length
+    *  array while Num.range(s, k) for k less than s yields null.
+    */
+   public static final int[] range(int s, int k) {
+      if (k < s)
+         return null;
+      int[] res = new int[k - s];
+      for (int i = s; i < k; ++i)
+         res[i - s] = i;
+      return res;
+   }
 }

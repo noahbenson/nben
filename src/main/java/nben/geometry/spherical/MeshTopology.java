@@ -22,6 +22,7 @@ package nben.geometry.spherical;
 
 import nben.util.Par;
 import nben.util.Num;
+import nben.util.Numpy;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -70,6 +71,12 @@ public class MeshTopology {
       // otherwise, this edge is not yet seen; add it to found, to await its reverse pair
       } else
          found.add(ef);
+   }
+   /** Constructs a mesh topology object from the given byte array (which is converted via the
+    *  nben.util.Numpy.int2FromBytes function to an int[][] array).
+    */
+   public static final MeshTopology fromBytes(byte[] b) {
+      return MeshTopology.from(Numpy.int2FromBytes(b));
    }
    /** Constructs a mesh topology object and returns it; if the given arguments do not form a valid
     *  mesh topology, then an exception is thrown. This function makes a copy of tris.
@@ -196,6 +203,13 @@ public class MeshTopology {
    public final Registration _register(double[][] coords) {
       return new Registration(coords);
    }
+   /** topology.registerBytes(b) yields a Registration object for the given coordinates combined 
+    *  with the given topology. The coordinates, which must be encoded in the byte array b, are
+    *  converted to a double[][] array via the nben.util.Numpy.double2FromBytes() funciton.
+    */
+   public final Registration registerBytes(byte[] b) {
+      return register(Numpy.double2FromBytes(b));
+   }
 
    /** topology.transform(from, to, coords) yields a transformation of the rows of coords from the
     *  topology registration given in from to the registration to.
@@ -262,6 +276,57 @@ public class MeshTopology {
                weights[i] = wgts[i] / tmp;
          }
       }
+      /** Interpolates from the vals and yields the result; ignore an masked vals. If all vals
+       *  relevant to a point are masked, set it to nullval.
+       */
+      public final double interpolate(double[] vals, double[] mask, double nullval) {
+         double res = 0;
+         double tot = 0;
+         int j;
+         for (int i = 0; i < indices.length; ++i) {
+            j = indices[i];
+            if (mask[j] > 0.5) {
+               res += weights[i] * vals[j];
+               tot += weights[i];
+            }
+         }
+         if (tot == 0) return nullval;
+         else          return res / tot;
+      }
+      /** Interpolates from the vals and yields the result; ignore an masked vals. If all vals
+       *  relevant to a point are masked, set it to nullval.
+       */
+      public final double interpolate(double[] vals, int[] mask, double nullval) {
+         if (mask[closest] == 0) return nullval;
+         double res = 0;
+         double tot = 0;
+         int j;
+         for (int i = 0; i < indices.length; ++i) {
+            j = indices[i];
+            if (mask[j] != 0) {
+               res += weights[i] * vals[j];
+               tot += weights[i];
+            }
+         }
+         return res / tot;
+      }
+      /** Interpolates from the vals and yields the result; ignore an masked vals. If all vals
+       *  relevant to a point are masked, set it to nullval.
+       */
+      public final double interpolate(double[] vals, boolean[] mask, double nullval) {
+         if (!mask[closest]) return nullval;
+         double res = 0;
+         double tot = 0;
+         int j;
+         for (int i = 0; i < indices.length; ++i) {
+            j = indices[i];
+            if (mask[j]) {
+               res += weights[i] * vals[j];
+               tot += weights[i];
+            }
+         }
+         return res / tot;
+      }
       /** Interpolates from the vals and yields the result */
       public final double interpolate(double[] vals) {
          double res = 0;
@@ -275,6 +340,27 @@ public class MeshTopology {
        */
       public final int interpolate(int[] vals) {
          return vals[closest];
+      }
+      /** Interpolates from the vals and yields the result; ignore an masked vals. If all vals
+       *  relevant to a point are masked, set it to nullval.
+       */
+      public final double interpolate(int[] vals, double[] mask, double nullval) {
+         if (mask[closest] > 0.5) return vals[closest];
+         else                     return nullval;
+      }
+      /** Interpolates from the vals and yields the result; ignore an masked vals. If all vals
+       *  relevant to a point are masked, set it to nullval.
+       */
+      public final double interpolate(int[] vals, int[] mask, double nullval) {
+         if (mask[closest] != 0) return vals[closest];
+         else                    return nullval;
+      }
+      /** Interpolates from the vals and yields the result; ignore an masked vals. If all vals
+       *  relevant to a point are masked, set it to nullval.
+       */
+      public final double interpolate(int[] vals, boolean[] mask, double nullval) {
+         if (mask[closest]) return vals[closest];
+         else               return nullval;
       }
    }
    /** topology.interpolation(from, to, order) yields an array of Interpolator objects, one per
@@ -328,7 +414,18 @@ public class MeshTopology {
             interp[i] = new Interpolator(vtcs, weights);
          }
       } else {
-         throw new UnsupportedOperationException("Interpolation orders > 1 are not yet supported");
+         // a simple interpretation of the order parameter
+         interp = interpolation(from, to, 1);
+         tot = 0;
+         for (i = 0; i < interp.length; ++i) {
+            weights = interp[i].weights;
+            for (j = 0; j < weights.length; j++) {
+               weights[i] = Math.pow(weights[i], order);
+               tot += weights[i];
+            }
+            for (j = 0; j < weights.length; j++)
+               weights[i] /= tot;
+         }
       }
       return interp;
    }
@@ -343,14 +440,66 @@ public class MeshTopology {
    public final double[] interpolate(Registration from, double[][] to, int order,
                                      double[] data, int[] mask, double nullval) {
       Interpolator[] interp = interpolation(from, to, order);
-      int tmp;
+      int tmp = 1;
       double[] res = new double[interp.length];
-      for (int i = 0; i < interp.length; ++i) {
-         tmp = interp[i].interpolate(mask);
-         if (tmp == 0) res[i] = nullval;
-         else          res[i] = interp[i].interpolate(data);
-      }
+      for (int i = 0; i < interp.length; ++i)
+         res[i] = interp[i].interpolate(data, mask, nullval);
       return res;
+   }
+   /** topology.interpolate(from, to, order, data, mask, nullval) yields an array of values that 
+    *  have been interpolated from the underlying from mesh to the points in the matrix to. The 
+    *  given data array is assumed to be the values at the from vertices, and mask is an array of 
+    *  either 0 or 1 values indicating whether the equivalent vertex in from is included (1) or not
+    *  (0) in the 'valid' region from which to interpolate. This may be null to indicate all 1's.
+    *  If a point in to is considered 'invalid' by the mask, then nullval is used instead of the
+    *  correct interpolated value.
+    *  Note that one can include non-0 and non-1 values in the mask; the function does not check
+    *  for these and merely requires that the interpolated value at the particular point in the to
+    *  matrix be greater than 0.5 to be included.
+    */
+   public final double[] interpolate(Registration from, double[][] to, int order,
+                                     double[] data, double[] mask, double nullval) {
+      Interpolator[] interp = interpolation(from, to, order);
+      double tmp = 1;
+      double[] res = new double[interp.length];
+      for (int i = 0; i < interp.length; ++i)
+         res[i] = interp[i].interpolate(data, mask, nullval);
+      return res;
+   }
+   public final double[] interpolate(Registration from, double[][] to, int order,
+                                     double[] data, boolean[] mask, double nullval) {
+      Interpolator[] interp = interpolation(from, to, order);
+      int tmp = 1;
+      double[] res = new double[interp.length];
+      for (int i = 0; i < interp.length; ++i)
+         res[i] = interp[i].interpolate(data, mask, nullval);
+      return res;
+   }
+   /** topology.interpolate(from, to, order, data) is equivalent to 
+    *  topology.interpolate(from, to, order, data, null, 0).
+    */
+   public final double[] interpolate(Registration from, double[][] to, int order, double[] data) {
+      Interpolator[] interp = interpolation(from, to, order);
+      double[] res = new double[interp.length];
+      for (int i = 0; i < interp.length; ++i)
+         res[i] = interp[i].interpolate(data);
+      return res;
+   }
+   /** topology.interpolate(from, to, order, data) is equivalent to 
+    *  topology.interpolate(from, to, order, data, null, 0).
+    */
+   public final int[] interpolate(Registration from, double[][] to, int order, int[] data) {
+      Interpolator[] interp = interpolation(from, to, order);
+      int[] res = new int[interp.length];
+      for (int i = 0; i < interp.length; ++i)
+         res[i] = interp[i].interpolate(data);
+      return res;
+   }
+   /** topology.interpolateBytes(from, to, order, data) is equivalnet to 
+    *  topology.interpolate(from, to, order, nben.util.Numpy.double1FromBytes(data)).
+    */
+   public final double[] interpolateBytes(Registration from, double[][] to, int order, byte[] b) {
+      return interpolate(from, to, order, Numpy.double1FromBytes(b));
    }
 }
 

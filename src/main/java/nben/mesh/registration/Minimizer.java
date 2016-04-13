@@ -29,6 +29,7 @@ import nben.util.Par;
 import nben.util.Num;
 
 import java.util.Arrays;
+import java.util.Vector;
 
 /** Minimizer is the class that handles a specific registration minimization. Minimizer
  *  has two basic modes of operation: step and nimbleStep. The step function is more
@@ -372,7 +373,9 @@ public class Minimizer {
             // see if the current step-size works; if not we'll halve it and try again...
             while (t0 == t) {
                // make sure we aren't below a threshold...
-               if (Num.zeroish(dt)) throw new Exception("Step-size decreased to effectively 0");
+               if (Num.zeroish(dt)) {
+                  throw new Exception("Step-size decreased to effectively 0 at step " + k);
+               }
                // take a step; this copies the current coordinates (m_X) into m_X0; same for grad
                takeStep(m_X, dt, grad, null);
                // now, get the new potential value...
@@ -414,6 +417,9 @@ public class Minimizer {
          report = re;
       }
       return re;
+   }
+   public Report step(Double deltaPE, Integer maxSteps, Double z) throws Exception {
+      return step(deltaPE.doubleValue(), maxSteps.intValue(), z.doubleValue());
    }
 
    /** min.nimpleStep(dt, ms, z, p) follows the gradient of its potential-field and configuration

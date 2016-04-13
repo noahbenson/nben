@@ -70,6 +70,10 @@ public final class Fields {
          fs[i] = new HarmonicFunction(scale[i] / n, shape);
       return new EdgePotential(fs, E, X);
    }
+   public static EdgePotential newHarmonicEdgePotential(double[] scale, Double shape,
+                                                        int[][] E, double[][] X) {
+      return newHarmonicEdgePotential(scale, shape.doubleValue(), E, X);
+   }
    public static EdgePotential newHarmonicEdgePotential(double scale, double[] shape,
                                                         int[][] E, double[][] X) {
       if (E.length == 3)
@@ -80,6 +84,10 @@ public final class Fields {
          fs[i] = new HarmonicFunction(scale / n, shape[i]);
       return new EdgePotential(fs, E, X);
    }
+   public static EdgePotential newHarmonicEdgePotential(Double scale, double[] shape,
+                                                        int[][] E, double[][] X) {
+      return newHarmonicEdgePotential(scale.doubleValue(), shape, E, X);
+   }
    public static EdgePotential newHarmonicEdgePotential(double[] scale, 
                                                         int[][] E, double[][] X) {
       if (E.length == 3)
@@ -89,7 +97,8 @@ public final class Fields {
       for (int i = 0; i < n; ++i)
          fs[i] = new HarmonicFunction(scale[i] / n, 2.0);
       return new EdgePotential(fs, E, X);
-   }   public static EdgePotential newHarmonicEdgePotential(double scale, double shape,
+   }
+   public static EdgePotential newHarmonicEdgePotential(double scale, double shape,
                                                         int[][] E, double[][] X) {
       if (E.length == 3) {
          int[][] tmp = Util.facesToEdges(E);
@@ -97,12 +106,19 @@ public final class Fields {
       } else
          return new EdgePotential(new HarmonicFunction(scale / E[0].length, shape), E, X);
    }
+   public static EdgePotential newHarmonicEdgePotential(Double scale, Double shape,
+                                                        int[][] E, double[][] X) {
+      return newHarmonicEdgePotential(scale.doubleValue(), shape.doubleValue(), E, X);
+   }
    public static EdgePotential newHarmonicEdgePotential(double scale, int[][] E, double[][] X) {
       if (E.length == 3) {
          int[][] tmp = Util.facesToEdges(E);
          return newHarmonicEdgePotential(scale, tmp, X);
       } else
          return new EdgePotential(new HarmonicFunction(scale / E[0].length), E, X);
+   }
+   public static EdgePotential newHarmonicEdgePotential(Double scale, int[][] E, double[][] X) {
+      return newHarmonicEdgePotential(scale.doubleValue(), E, X);
    }
    public static EdgePotential newHarmonicEdgePotential(int[][] E, double[][] X) {
       if (E.length == 3)
@@ -139,6 +155,10 @@ public final class Fields {
          ljs[i] = new LennardJonesFunction(scale[i] / E[0].length, shape);
       return new EdgePotential(ljs, E, X);
    }
+   public static EdgePotential newLJEdgePotential(double[] scale, Double shape,
+                                                  int[][] E, double[][] X) {
+      return newLJEdgePotential(scale, shape.doubleValue(), E, X);
+   }
    public static EdgePotential newLJEdgePotential(double scale, double[] shape,
                                                   int[][] E, double[][] X) {
       if (E.length == 3) 
@@ -147,6 +167,10 @@ public final class Fields {
       for (int i = 0; i < ljs.length; ++i)
          ljs[i] = new LennardJonesFunction(scale / E[0].length, shape[i]);
       return new EdgePotential(ljs, E, X);
+   }
+   public static EdgePotential newLJEdgePotential(Double scale, double[] shape,
+                                                  int[][] E, double[][] X) {
+      return newLJEdgePotential(scale.doubleValue(), shape, E, X);
    }
    public static EdgePotential newLJEdgePotential(double[] scale,
                                                   int[][] E, double[][] X) {
@@ -164,12 +188,19 @@ public final class Fields {
       else
          return new EdgePotential(new LennardJonesFunction(scale / E[0].length, shape), E, X);
    }
+   public static EdgePotential newLJEdgePotential(Double scale, Double shape,
+                                                  int[][] E, double[][] X) {
+      return newLJEdgePotential(scale.doubleValue(), shape.doubleValue(), E, X);
+   }
    public static EdgePotential newLJEdgePotential(double scale,
                                                   int[][] E, double[][] X) {
       if (E.length == 3) 
          return newLJEdgePotential(scale, Util.facesToEdges(E), X);
       else
          return new EdgePotential(new LennardJonesFunction(scale / E[0].length), E, X);
+   }
+   public static EdgePotential newLJEdgePotential(Double scale, int[][] E, double[][] X) {
+      return newLJEdgePotential(scale.doubleValue(), E, X);
    }
    public static EdgePotential newLJEdgePotential(int[][] E, double[][] X) {
       if (E.length == 3) 
@@ -203,12 +234,20 @@ public final class Fields {
          fs[i] = new HarmonicFunction(scale[i] / (3 * T[0].length), shape);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
    }
+   public static AnglePotential newHarmonicAnglePotential(double[] scale, Double shape,
+                                                          int[][] T, double[][] X) {
+      return newHarmonicAnglePotential(scale, shape.doubleValue(), T, X);
+   }
    public static AnglePotential newHarmonicAnglePotential(double scale, double[] shape,
                                                           int[][] T, double[][] X) {
       HarmonicFunction[] fs = new HarmonicFunction[shape.length];
       for (int i = 0; i < shape.length; ++i)
          fs[i] = new HarmonicFunction(scale / (3 * T[0].length), shape[i]);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newHarmonicAnglePotential(Double scale, double[] shape,
+                                                          int[][] T, double[][] X) {
+      return newHarmonicAnglePotential(scale.doubleValue(), shape, T, X);
    }
    public static AnglePotential newHarmonicAnglePotential(double[] scale,
                                                           int[][] T, double[][] X) {
@@ -222,10 +261,17 @@ public final class Fields {
       return new AnglePotential(new HarmonicFunction(scale / (3.0 * T[0].length), shape), 
                                 Util.facesToAngles(T), X);
    }
+   public static AnglePotential newHarmonicAnglePotential(Double scale, Double shape,
+                                                          int[][] T, double[][] X) {
+      return newHarmonicAnglePotential(scale.doubleValue(), shape.doubleValue(), T, X);
+   }
    public static AnglePotential newHarmonicAnglePotential(double scale,
                                                           int[][] T, double[][] X) {
       return new AnglePotential(new HarmonicFunction(scale / (3.0 * T[0].length)), 
                                 Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newHarmonicAnglePotential(Double scale, int[][] T, double[][] X) {
+      return newHarmonicAnglePotential(scale.doubleValue(), T, X);
    }
    public static AnglePotential newHarmonicAnglePotential(int[][] T, double[][] X) {
       return new AnglePotential(new HarmonicFunction(1.0 / (3.0 * T[0].length)), 
@@ -257,12 +303,20 @@ public final class Fields {
          fs[i] = new LennardJonesFunction(scale[i] / (3 * T[0].length), shape);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
    }
+   public static AnglePotential newLJAnglePotential(double[] scale, Double shape,
+                                                    int[][] T, double[][] X) {
+      return newLJAnglePotential(scale, shape.doubleValue(), T, X);
+   }
    public static AnglePotential newLJAnglePotential(double scale, double[] shape,
                                                     int[][] T, double[][] X) {
       LennardJonesFunction[] fs = new LennardJonesFunction[shape.length];
       for (int i = 0; i < shape.length; ++i)
          fs[i] = new LennardJonesFunction(scale / (3 * T[0].length), shape[i]);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newLJAnglePotential(Double scale, double[] shape,
+                                                    int[][] T, double[][] X) {
+      return newLJAnglePotential(scale.doubleValue(), shape, T, X);
    }
    public static AnglePotential newLJAnglePotential(double[] scale,
                                                     int[][] T, double[][] X) {
@@ -276,10 +330,17 @@ public final class Fields {
       return new AnglePotential(new LennardJonesFunction(scale / (3.0 * T[0].length), shape), 
                                 Util.facesToAngles(T), X);
    }
+   public static AnglePotential newLJAnglePotential(Double scale, Double shape,
+                                                    int[][] T, double[][] X) {
+      return newLJAnglePotential(scale.doubleValue(), shape.doubleValue(), T, X);
+   }
    public static AnglePotential newLJAnglePotential(double scale,
                                                     int[][] T, double[][] X) {
       return new AnglePotential(new LennardJonesFunction(scale / (3.0 * T[0].length)), 
                                 Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newLJAnglePotential(Double scale, int[][] T, double[][] X) {
+      return newLJAnglePotential(scale.doubleValue(), T, X);
    }
    public static AnglePotential newLJAnglePotential(int[][] T, double[][] X) {
       return new AnglePotential(new LennardJonesFunction(1.0 / (3.0 * T[0].length)), 
@@ -315,12 +376,22 @@ public final class Fields {
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
    }
    public static AnglePotential newWellAnglePotential(double[] scale, double[] shape,
+                                                      double[] min, Double max,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale, shape, min, max.doubleValue(), T, X);
+   }
+   public static AnglePotential newWellAnglePotential(double[] scale, double[] shape,
                                                       double min, double[] max,
                                                       int[][] T, double[][] X) {
       InfiniteWellFunction[] fs = new InfiniteWellFunction[scale.length];
       for (int i = 0; i < fs.length; ++i)
          fs[i] = new InfiniteWellFunction(scale[i] / (3 * T[0].length), min, max[i], shape[i]);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newWellAnglePotential(double[] scale, double[] shape,
+                                                      Double min, double[] max,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale, shape, min.doubleValue(), max, T, X);
    }
    public static AnglePotential newWellAnglePotential(double[] scale, double[] shape,
                                                       double min, double max,
@@ -330,6 +401,11 @@ public final class Fields {
          fs[i] = new InfiniteWellFunction(scale[i] / (3 * T[0].length), min, max, shape[i]);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
    }
+   public static AnglePotential newWellAnglePotential(double[] scale, double[] shape,
+                                                      Double min, Double max,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale, shape, min.doubleValue(), max.doubleValue(), T, X);
+   }
    public static AnglePotential newWellAnglePotential(double[] scale, double shape,
                                                       double[] min, double[] max,
                                                       int[][] T, double[][] X) {
@@ -337,6 +413,11 @@ public final class Fields {
       for (int i = 0; i < fs.length; ++i)
          fs[i] = new InfiniteWellFunction(scale[i] / (3 * T[0].length), min[i], max[i], shape);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newWellAnglePotential(double[] scale, Double shape,
+                                                      double[] min, double[] max,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale, shape.doubleValue(), min, max, T, X);
    }
    public static AnglePotential newWellAnglePotential(double[] scale, double shape,
                                                       double[] min, double max,
@@ -346,6 +427,11 @@ public final class Fields {
          fs[i] = new InfiniteWellFunction(scale[i] / (3 * T[0].length), min[i], max, shape);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
    }
+   public static AnglePotential newWellAnglePotential(double[] scale, Double shape,
+                                                      double[] min, Double max,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale, shape.doubleValue(), min, max.doubleValue(), T, X);
+   }
    public static AnglePotential newWellAnglePotential(double[] scale, double shape,
                                                       double min, double[] max,
                                                       int[][] T, double[][] X) {
@@ -353,6 +439,11 @@ public final class Fields {
       for (int i = 0; i < fs.length; ++i)
          fs[i] = new InfiniteWellFunction(scale[i] / (3 * T[0].length), min, max[i], shape);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newWellAnglePotential(double[] scale, Double shape,
+                                                      Double min, double[] max,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale, shape.doubleValue(), min.doubleValue(), max, T, X);
    }
    public static AnglePotential newWellAnglePotential(double[] scale, double shape,
                                                       double min, double max,
@@ -362,6 +453,12 @@ public final class Fields {
          fs[i] = new InfiniteWellFunction(scale[i] / (3 * T[0].length), min, max, shape);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
    }
+   public static AnglePotential newWellAnglePotential(double[] scale, Double shape,
+                                                      Double min, Double max,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale, shape.doubleValue(), 
+                                   min.doubleValue(), max.doubleValue(), T, X);
+   }
    public static AnglePotential newWellAnglePotential(double scale, double[] shape,
                                                       double[] min, double[] max,
                                                       int[][] T, double[][] X) {
@@ -369,6 +466,11 @@ public final class Fields {
       for (int i = 0; i < fs.length; ++i)
          fs[i] = new InfiniteWellFunction(scale / (3 * T[0].length), min[i], max[i], shape[i]);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newWellAnglePotential(Double scale, double[] shape,
+                                                      double[] min, double[] max,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale.doubleValue(), shape, min, max, T, X);
    }
    public static AnglePotential newWellAnglePotential(double scale, double[] shape,
                                                       double[] min, double max,
@@ -378,6 +480,11 @@ public final class Fields {
          fs[i] = new InfiniteWellFunction(scale / (3 * T[0].length), min[i], max, shape[i]);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
    }
+   public static AnglePotential newWellAnglePotential(Double scale, double[] shape,
+                                                      double[] min, Double max,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale.doubleValue(), shape, min, max.doubleValue(), T, X);
+   }
    public static AnglePotential newWellAnglePotential(double scale, double[] shape,
                                                       double min, double[] max,
                                                       int[][] T, double[][] X) {
@@ -385,6 +492,11 @@ public final class Fields {
       for (int i = 0; i < fs.length; ++i)
          fs[i] = new InfiniteWellFunction(scale / (3 * T[0].length), min, max[i], shape[i]);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newWellAnglePotential(Double scale, double[] shape,
+                                                      Double min, double[] max,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale.doubleValue(), shape, min.doubleValue(), max, T, X);
    }
    public static AnglePotential newWellAnglePotential(double scale, double[] shape,
                                                       double min, double max,
@@ -394,11 +506,23 @@ public final class Fields {
          fs[i] = new InfiniteWellFunction(scale / (3 * T[0].length), min, max, shape[i]);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
    }
+   public static AnglePotential newWellAnglePotential(Double scale, double[] shape,
+                                                      Double min, Double max,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale.doubleValue(), shape, 
+                                   min.doubleValue(), max.doubleValue(), T, X);
+   }
    public static AnglePotential newWellAnglePotential(double scale, double shape,
                                                       double min, double max,
                                                       int[][] T, double[][] X) {
       return new AnglePotential(new InfiniteWellFunction(scale / (3*T[0].length), min, max, shape),
                                 Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newWellAnglePotential(Double scale, Double shape,
+                                                      Double min, Double max,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale.doubleValue(), shape.doubleValue(), 
+                                   min.doubleValue(), max.doubleValue(), T, X);
    }
    public static AnglePotential newWellAnglePotential(double[] scale, double[] shape,
                                                       int[][] T, double[][] X) {
@@ -414,12 +538,20 @@ public final class Fields {
          fs[i] = new InfiniteWellFunction(scale[i] / (3 * T[0].length), 0.0, Math.PI, shape);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
    }
+   public static AnglePotential newWellAnglePotential(double[] scale, Double shape,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale, shape.doubleValue(), T, X);
+   }
    public static AnglePotential newWellAnglePotential(double scale, double[] shape,
                                                       int[][] T, double[][] X) {
       InfiniteWellFunction[] fs = new InfiniteWellFunction[shape.length];
       for (int i = 0; i < fs.length; ++i)
          fs[i] = new InfiniteWellFunction(scale / (3 * T[0].length), 0.0, Math.PI, shape[i]);
       return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newWellAnglePotential(Double scale, double[] shape,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale.doubleValue(), shape, T, X);
    }
    public static AnglePotential newWellAnglePotential(double[] scale, int[][] T, double[][] X) {
       InfiniteWellFunction[] fs = new InfiniteWellFunction[scale.length];
@@ -433,10 +565,18 @@ public final class Fields {
                                                          0.0, Math.PI, shape),
                                 Util.facesToAngles(T), X);
    }
+   public static AnglePotential newWellAnglePotential(Double scale, Double shape,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale.doubleValue(), shape.doubleValue(), T, X);
+   }
    public static AnglePotential newWellAnglePotential(double scale,
                                                       int[][] T, double[][] X) {
       return new AnglePotential(new InfiniteWellFunction(scale / (3*T[0].length), 0.0, Math.PI),
                                 Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newWellAnglePotential(Double scale,
+                                                      int[][] T, double[][] X) {
+      return newWellAnglePotential(scale.doubleValue(), T, X);
    }
    public static AnglePotential newWellAnglePotential(int[][] T, double[][] X) {
       return new AnglePotential(new InfiniteWellFunction(1.0 / (3*T[0].length), 0.0, Math.PI),
@@ -473,6 +613,11 @@ public final class Fields {
          fs[i] = new HarmonicFunction(scale[i] / vertices.length, shape);
       return new AnchorPotential(fs, vertices, points, X);
    }
+   public static AnchorPotential newHarmonicAnchorPotential(double[] scale, Double shape,
+                                                            int[] vertices, double[][] points, 
+                                                            double[][] X) {
+      return newHarmonicAnchorPotential(scale, shape.doubleValue(), vertices, points, X);
+   }
    public static AnchorPotential newHarmonicAnchorPotential(double scale, double[] shape,
                                                             int[] vertices, double[][] points, 
                                                             double[][] X) {
@@ -480,6 +625,11 @@ public final class Fields {
       for (int i = 0; i < fs.length; ++i)
          fs[i] = new HarmonicFunction(scale / vertices.length, shape[i]);
       return new AnchorPotential(fs, vertices, points, X);
+   }
+   public static AnchorPotential newHarmonicAnchorPotential(Double scale, double[] shape,
+                                                            int[] vertices, double[][] points, 
+                                                            double[][] X) {
+      return newHarmonicAnchorPotential(scale.doubleValue(), shape, vertices, points, X);
    }
    public static AnchorPotential newHarmonicAnchorPotential(double[] scale,
                                                             int[] vertices, double[][] points, 
@@ -495,11 +645,23 @@ public final class Fields {
       return new AnchorPotential(new HarmonicFunction(scale / vertices.length, shape),
                                  vertices, points, X);
    }
+   public static AnchorPotential newHarmonicAnchorPotential(Double scale, Double shape,
+                                                            int[] vertices, double[][] points, 
+                                                            double[][] X) {
+      return newHarmonicAnchorPotential(scale.doubleValue(), shape.doubleValue(), vertices,
+                                        points, X);
+   }
    public static AnchorPotential newHarmonicAnchorPotential(double scale, 
                                                             int[] vertices, double[][] points, 
                                                             double[][] X) {
       return new AnchorPotential(new HarmonicFunction(scale/vertices.length, 2.0),
                                  vertices, points, X);
+   }
+   public static AnchorPotential newHarmonicAnchorPotential(Double scale,
+                                                            int[] vertices, double[][] points, 
+                                                            double[][] X) {
+      return newHarmonicAnchorPotential(scale.doubleValue(), vertices,
+                                        points, X);
    }
    public static AnchorPotential newHarmonicAnchorPotential(int[] vertices, double[][] points, 
                                                             double[][] X) {
@@ -540,6 +702,12 @@ public final class Fields {
          fs[i] = new GaussianFunction(scale[i]/vertices.length, sig[i], shape);
       return new AnchorPotential(fs, vertices, points, X);
    }
+   public static AnchorPotential newGaussianAnchorPotential(double[] scale, double[] sig, 
+                                                            Double shape,
+                                                            int[] vertices, double[][] points,
+                                                            double[][] X) {
+      return newGaussianAnchorPotential(scale, sig, shape.doubleValue(), vertices, points, X);
+   }
    public static AnchorPotential newGaussianAnchorPotential(double[] scale, double sig, 
                                                             double[] shape,
                                                             int[] vertices, double[][] points,
@@ -548,6 +716,12 @@ public final class Fields {
       for (int i = 0; i < fs.length; ++i)
          fs[i] = new GaussianFunction(scale[i]/vertices.length, sig, shape[i]);
       return new AnchorPotential(fs, vertices, points, X);
+   }
+   public static AnchorPotential newGaussianAnchorPotential(double[] scale, Double sig, 
+                                                            double[] shape,
+                                                            int[] vertices, double[][] points,
+                                                            double[][] X) {
+      return newGaussianAnchorPotential(scale, sig.doubleValue(), shape, vertices, points, X);
    }
    public static AnchorPotential newGaussianAnchorPotential(double scale, double[] sig, 
                                                             double[] shape,
@@ -558,6 +732,12 @@ public final class Fields {
          fs[i] = new GaussianFunction(scale/vertices.length, sig[i], shape[i]);
       return new AnchorPotential(fs, vertices, points, X);
    }
+   public static AnchorPotential newGaussianAnchorPotential(Double scale, double[] sig, 
+                                                            double[] shape,
+                                                            int[] vertices, double[][] points,
+                                                            double[][] X) {
+      return newGaussianAnchorPotential(scale.doubleValue(), sig, shape, vertices, points, X);
+   }
    public static AnchorPotential newGaussianAnchorPotential(double scale, double sig, 
                                                             double[] shape,
                                                             int[] vertices, double[][] points,
@@ -566,6 +746,13 @@ public final class Fields {
       for (int i = 0; i < fs.length; ++i)
          fs[i] = new GaussianFunction(scale/vertices.length, sig, shape[i]);
       return new AnchorPotential(fs, vertices, points, X);
+   }
+   public static AnchorPotential newGaussianAnchorPotential(Double scale, Double sig, 
+                                                            double[] shape,
+                                                            int[] vertices, double[][] points,
+                                                            double[][] X) {
+      return newGaussianAnchorPotential(scale.doubleValue(), sig.doubleValue(), shape, vertices,
+                                        points, X);
    }
    public static AnchorPotential newGaussianAnchorPotential(double scale, double[] sig, 
                                                             double shape,
@@ -576,6 +763,13 @@ public final class Fields {
          fs[i] = new GaussianFunction(scale/vertices.length, sig[i], shape);
       return new AnchorPotential(fs, vertices, points, X);
    }
+   public static AnchorPotential newGaussianAnchorPotential(Double scale, double[] sig, 
+                                                            Double shape,
+                                                            int[] vertices, double[][] points,
+                                                            double[][] X) {
+      return newGaussianAnchorPotential(scale.doubleValue(), sig, shape.doubleValue(), vertices,
+                                        points, X);
+   }
    public static AnchorPotential newGaussianAnchorPotential(double[] scale, double sig, 
                                                             double shape,
                                                             int[] vertices, double[][] points,
@@ -585,13 +779,26 @@ public final class Fields {
          fs[i] = new GaussianFunction(scale[i]/vertices.length, sig, shape);
       return new AnchorPotential(fs, vertices, points, X);
    }
+   public static AnchorPotential newGaussianAnchorPotential(double[] scale, Double sig, 
+                                                            Double shape,
+                                                            int[] vertices, double[][] points,
+                                                            double[][] X) {
+      return newGaussianAnchorPotential(scale, sig.doubleValue(), shape.doubleValue(), vertices,
+                                        points, X);
+   }
    public static AnchorPotential newGaussianAnchorPotential(double scale, double sig, double shape,
                                                             int[] vertices, double[][] points, 
                                                             double[][] X) {
       return new AnchorPotential(new GaussianFunction(scale/vertices.length, sig, shape),
                                  vertices, points, X);
    }
-
+   public static AnchorPotential newGaussianAnchorPotential(Double scale, Double sig, 
+                                                            Double shape,
+                                                            int[] vertices, double[][] points,
+                                                            double[][] X) {
+      return newGaussianAnchorPotential(scale.doubleValue(), sig.doubleValue(), shape.doubleValue(),
+                                        vertices, points, X);
+   }
    public static AnchorPotential newGaussianAnchorPotential(double[] scale, double[] sig,
                                                             int[] vertices, double[][] points, 
                                                             double[][] X) {
@@ -608,6 +815,12 @@ public final class Fields {
          fs[i] = new GaussianFunction(scale[i]/vertices.length, sig, 2.0);
       return new AnchorPotential(fs, vertices, points, X);
    }
+   public static AnchorPotential newGaussianAnchorPotential(double[] scale, Double sig, 
+                                                            int[] vertices, double[][] points,
+                                                            double[][] X) {
+      return newGaussianAnchorPotential(scale, sig.doubleValue(),
+                                        vertices, points, X);
+   }
    public static AnchorPotential newGaussianAnchorPotential(double scale, double[] sig,
                                                             int[] vertices, double[][] points, 
                                                             double[][] X) {
@@ -616,13 +829,24 @@ public final class Fields {
          fs[i] = new GaussianFunction(scale/vertices.length, sig[i], 2.0);
       return new AnchorPotential(fs, vertices, points, X);
    }
+   public static AnchorPotential newGaussianAnchorPotential(Double scale, double[] sig, 
+                                                            int[] vertices, double[][] points,
+                                                            double[][] X) {
+      return newGaussianAnchorPotential(scale.doubleValue(), sig,
+                                        vertices, points, X);
+   }
    public static AnchorPotential newGaussianAnchorPotential(double scale, double sig,
                                                             int[] vertices, double[][] points, 
                                                             double[][] X) {
       return new AnchorPotential(new GaussianFunction(scale/vertices.length, sig, 2.0),
                                  vertices, points, X);
    }
-
+   public static AnchorPotential newGaussianAnchorPotential(Double scale, Double sig, 
+                                                            int[] vertices, double[][] points,
+                                                            double[][] X) {
+      return newGaussianAnchorPotential(scale.doubleValue(), sig.doubleValue(),
+                                        vertices, points, X);
+   }
    public static AnchorPotential newGaussianAnchorPotential(double[] sig,
                                                             int[] vertices, double[][] points, 
                                                             double[][] X) {
@@ -638,7 +862,11 @@ public final class Fields {
       return new AnchorPotential(new GaussianFunction(1.0/vertices.length, sig, 2.0),
                                  vertices, points, X);
    }
-
+   public static AnchorPotential newGaussianAnchorPotential(Double sig,
+                                                            int[] vertices, double[][] points, 
+                                                            double[][] X) {
+      return newGaussianAnchorPotential(sig.doubleValue(), vertices, points, X);
+   }
    public static AnchorPotential newGaussianAnchorPotential(int[] vertices, double[][] points, 
                                                             double[][] X) {
       return new AnchorPotential(new GaussianFunction(1.0/vertices.length, 1.0, 2.0),
@@ -665,9 +893,17 @@ public final class Fields {
       return new AnchorPotential(new HarmonicFunction(scale/perim.length, shape), 
                                  perim, perimX0, X);
    }
+   public static AnchorPotential newHarmonicPerimeterPotential(Double scale, Double shape,
+                                                               int[][] faces, double[][] X) {
+      return newHarmonicPerimeterPotential(scale.doubleValue(), shape.doubleValue(), faces, X);
+   }
    public static AnchorPotential newHarmonicPerimeterPotential(double scale,
                                                                int[][] faces, double[][] X) {
       return newHarmonicPerimeterPotential(scale, 2.0, faces, X);
+   }
+   public static AnchorPotential newHarmonicPerimeterPotential(Double scale,
+                                                               int[][] faces, double[][] X) {
+      return newHarmonicPerimeterPotential(scale.doubleValue(), faces, X);
    }
    public static AnchorPotential newHarmonicPerimeterPotential(int[][] faces, double[][] X) {
       return newHarmonicPerimeterPotential(1.0, 2.0, faces, X);
@@ -695,9 +931,17 @@ public final class Fields {
          P.addField(newHarmonicPerimeterPotential(1.0, 2.0, faces, X));
       return P;
    }
+   public static PotentialSum newStandardMeshPotential(Double edgeScale, Double angleScale, 
+                                                       int[][] faces, double[][] X) {
+      return newStandardMeshPotential(edgeScale.doubleValue(), angleScale.doubleValue(), faces, X);
+   }
    public static PotentialSum newStandardMeshPotential(double edgeScale, 
                                                        int[][] faces, double[][] X) {
       return newStandardMeshPotential(edgeScale, 1.0, faces, X);
+   }
+   public static PotentialSum newStandardMeshPotential(Double edgeScale, 
+                                                       int[][] faces, double[][] X) {
+      return newStandardMeshPotential(edgeScale.doubleValue(), faces, X);
    }
    public static PotentialSum newStandardMeshPotential(int[][] faces, double[][] X) {
       return newStandardMeshPotential(250.0, 1.0, faces, X);

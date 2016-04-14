@@ -333,7 +333,7 @@ public class Minimizer {
     *  @return a Report object detailing the minimization trajectory
     */
    synchronized public Report step(double deltaPE, int maxSteps, double z) throws Exception {
-      double t, t0, dt, dx, pe, pe0, maxNorm;
+      double t, t0, dt, dx, pe, pe0, petry, maxNorm;
       int k = 0;
       if (deltaPE <= 0 || maxSteps < 1) return null;
       if (z <= 0) throw new IllegalArgumentException("parameter z to step must be > 0");
@@ -359,6 +359,7 @@ public class Minimizer {
       t = 0;
       pe0 = val.potential;
       pe = pe0;
+      petry = pe;
       Report re = new Report(pe0);
       try {
          while ((1.0 - pe/pe0) < deltaPE && k < maxSteps) {
@@ -374,7 +375,13 @@ public class Minimizer {
             while (t0 == t) {
                // make sure we aren't below a threshold...
                if (Num.zeroish(dt)) {
-                  throw new Exception("Step-size decreased to effectively 0 at step " + k);
+                  if (Num.zeroish(petry - pe)) {
+                     // this is actually fine --- we've reached a point where the potential is
+                     // flat, within our numerical ability to measure it
+                     k = maxSteps; // so that we break out entirely
+                     break;
+                  } else
+                     throw new Exception("Step-size decreased to effectively 0 at step " + k);
                }
                // take a step; this copies the current coordinates (m_X) into m_X0; same for grad
                takeStep(m_X, dt, grad, null);
@@ -390,6 +397,10 @@ public class Minimizer {
                   // smaller step
                   copyMatrix(m_X, Xbak, null);
                   dt *= 0.5;
+                  // we want to save petry here; this is so that, if we get dt to 0 and petry is
+                  // actually equal to pe, we know that we've actually reached a point at which the
+                  // potential is effectively flat
+                  petry = pe;
                } else {
                   // We've completed a step!
                   ++k;
@@ -408,6 +419,7 @@ public class Minimizer {
                   // update the time, total distance, and potential
                   t += dt;
                   pe = val.potential;
+                  petry = pe;
                }
             }
          }

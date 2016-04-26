@@ -5,9 +5,9 @@
 ;; any format can extend this protocol and have a ready tensor class that will operate optimally 
 ;; with all nben math functions.
 ;; 
-;; Copyright (C) 2012 Noah C. Benson
+;; Copyright (C) 2016 Noah C. Benson
 ;;
-;; This file is part of the nben clojure library.
+;; This file is part of the nben library.
 ;;
 ;; The nben clojure library is free software: you can redistribute it and/or modify it under the 
 ;; terms of the GNU General Public License as published by the Free Software Foundation, either 
@@ -22,7 +22,9 @@
 ;;
 
 (ns nben.math
-  (:use nben.util.iterator))
+  (:use nben.util.iterator)
+  (:require [clojure.core.matrix :as mtx]
+            [clojure.core.matrix.operators :as mop]))
 
 ;;
 ;; These are just for internal error use

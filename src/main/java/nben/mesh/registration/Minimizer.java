@@ -456,7 +456,7 @@ public class Minimizer {
     */
    synchronized public Report nimbleStep(double deltaPE, int maxSteps, double z, int partitions)
       throws Exception {
-      double maxNorm, t, t0, dt, dt0, dx, pe, pe0, peStep, dtStep;
+      double maxNorm, t, t0, dt, dt0, dx, pe, pe0, peStep, peStep0, dtStep;
       int miniStepsPerStep = (1 << partitions);
       int k = 0;
       int miniStep, part;
@@ -491,8 +491,12 @@ public class Minimizer {
       Report re = new Report(pe0);
       try {
          while ((1.0 - pe/pe0) < deltaPE && k++ < maxSteps) {
-            if (Num.zeroish(maxNorm))
-               throw new Exception("gradient is effectively 0");
+            if (Num.zeroish(maxNorm)) {
+               //throw new Exception("gradient is effectively 0");
+               // this is good, right? =)
+               break;
+            }
+            peStep0 = pe;
             Arrays.fill(dtPart, 0);
             // pick our start step size
             dt0 = z / maxNorm;
@@ -520,8 +524,13 @@ public class Minimizer {
                   cont = true;
                   while (cont) {
                      // make sure we aren't below a threshold...
-                     if (Num.zeroish(dt))
-                        throw new Exception("Step-size decreased to effectively 0");
+                     if (Num.zeroish(dt)) {
+                        //throw new Exception("Step-size decreased to effectively 0");
+                        // we actually need to consider if we've reached a minimum here: if the
+                        // potential does not change, then we have reached some flat point. We only
+                        // need to worry about this on the outer loops, though.
+                        break;
+                     }
                      // take a single step...
                      takeStep(m_X, dt, grad, ss[part]);
                      // calculate the new gradient/potential
@@ -552,6 +561,11 @@ public class Minimizer {
             pe = val.potential;
             re.push(dtStep, val.gradientLength * dtStep, maxNorm, valTmp.potential - pe);
             maxNorm = norms[val.steepestVertex];
+            // check if we have reached a flat point
+            if (Num.eq(pe, peStep0)) {
+               // this is not considered an error for now: just exit gracefully
+               break;
+            }
          }
       } finally {
          re.freeze(val == null? pe : val.potential);

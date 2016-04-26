@@ -77,7 +77,7 @@
 (import-fn jordanlewis.data.union-find/union clusters-union)
 
 ;; --> error ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(import-vars [nben.util.error arg-err state-err arithmetic-err unsupported-err arity-err])
+(import-vars [nben.util.error arg-err state-err arithmetic-err unsupported-err arity-err check])
 
 ;; --> typedef ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (import-vars [nben.util.typedef def-set-type def-vec-type defmultipro])

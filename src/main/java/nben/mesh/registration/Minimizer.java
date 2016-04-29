@@ -564,6 +564,7 @@ public class Minimizer {
             // check if we have reached a flat point
             if (Num.eq(pe, peStep0)) {
                // this is not considered an error for now: just exit gracefully
+               //throw new IllegalStateException("Gradient is effectively flat");
                break;
             }
          }

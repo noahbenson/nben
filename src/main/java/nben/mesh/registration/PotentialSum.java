@@ -25,7 +25,6 @@ package nben.mesh.registration;
 import nben.mesh.registration.Util;
 import nben.mesh.registration.IPotentialField;
 
-import nben.util.Numbers;
 import nben.util.Par;
 
 import java.util.concurrent.CancellationException;

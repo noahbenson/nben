@@ -26,9 +26,10 @@ import nben.mesh.registration.IPotentialField;
 import nben.mesh.registration.PotentialValue;
 
 import nben.util.Par;
-import nben.util.Numbers;
+import nben.util.Num;
 
 import java.util.Arrays;
+import java.util.Vector;
 
 /** Minimizer is the class that handles a specific registration minimization. Minimizer
  *  has two basic modes of operation: step and nimbleStep. The step function is more
@@ -332,7 +333,7 @@ public class Minimizer {
     *  @return a Report object detailing the minimization trajectory
     */
    synchronized public Report step(double deltaPE, int maxSteps, double z) throws Exception {
-      double t, t0, dt, dx, pe, pe0, maxNorm;
+      double t, t0, dt, dx, pe, pe0, petry, maxNorm;
       int k = 0;
       if (deltaPE <= 0 || maxSteps < 1) return null;
       if (z <= 0) throw new IllegalArgumentException("parameter z to step must be > 0");
@@ -358,18 +359,30 @@ public class Minimizer {
       t = 0;
       pe0 = val.potential;
       pe = pe0;
+      petry = pe;
       Report re = new Report(pe0);
       try {
          while ((1.0 - pe/pe0) < deltaPE && k < maxSteps) {
-            if (Numbers.zeroish(maxNorm))
-               throw new Exception("gradient is effectively 0");
+            if (Num.zeroish(maxNorm)) {
+               // this isn't really an error; we've arrived at a local minimum or saddle point
+               //throw new Exception("gradient is effectively 0");
+               break;
+            }
             // pick our start step size
             dt = z / maxNorm;
             t0 = t;
             // see if the current step-size works; if not we'll halve it and try again...
             while (t0 == t) {
                // make sure we aren't below a threshold...
-               if (Numbers.zeroish(dt)) throw new Exception("Step-size decreased to effectively 0");
+               if (Num.zeroish(dt)) {
+                  if (Num.zeroish(petry - pe)) {
+                     // this is actually fine --- we've reached a point where the potential is
+                     // flat, within our numerical ability to measure it
+                     k = maxSteps; // so that we break out entirely
+                     break;
+                  } else
+                     throw new Exception("Step-size decreased to effectively 0 at step " + k);
+               }
                // take a step; this copies the current coordinates (m_X) into m_X0; same for grad
                takeStep(m_X, dt, grad, null);
                // now, get the new potential value...
@@ -384,6 +397,10 @@ public class Minimizer {
                   // smaller step
                   copyMatrix(m_X, Xbak, null);
                   dt *= 0.5;
+                  // we want to save petry here; this is so that, if we get dt to 0 and petry is
+                  // actually equal to pe, we know that we've actually reached a point at which the
+                  // potential is effectively flat
+                  petry = pe;
                } else {
                   // We've completed a step!
                   ++k;
@@ -402,6 +419,7 @@ public class Minimizer {
                   // update the time, total distance, and potential
                   t += dt;
                   pe = val.potential;
+                  petry = pe;
                }
             }
          }
@@ -411,6 +429,9 @@ public class Minimizer {
          report = re;
       }
       return re;
+   }
+   public Report step(Double deltaPE, Integer maxSteps, Double z) throws Exception {
+      return step(deltaPE.doubleValue(), maxSteps.intValue(), z.doubleValue());
    }
 
    /** min.nimpleStep(dt, ms, z, p) follows the gradient of its potential-field and configuration
@@ -435,7 +456,7 @@ public class Minimizer {
     */
    synchronized public Report nimbleStep(double deltaPE, int maxSteps, double z, int partitions)
       throws Exception {
-      double maxNorm, t, t0, dt, dt0, dx, pe, pe0, peStep, dtStep;
+      double maxNorm, t, t0, dt, dt0, dx, pe, pe0, peStep, peStep0, dtStep;
       int miniStepsPerStep = (1 << partitions);
       int k = 0;
       int miniStep, part;
@@ -470,8 +491,12 @@ public class Minimizer {
       Report re = new Report(pe0);
       try {
          while ((1.0 - pe/pe0) < deltaPE && k++ < maxSteps) {
-            if (Numbers.zeroish(maxNorm))
-               throw new Exception("gradient is effectively 0");
+            if (Num.zeroish(maxNorm)) {
+               //throw new Exception("gradient is effectively 0");
+               // this is good, right? =)
+               break;
+            }
+            peStep0 = pe;
             Arrays.fill(dtPart, 0);
             // pick our start step size
             dt0 = z / maxNorm;
@@ -491,7 +516,7 @@ public class Minimizer {
                   clearGradient(grad, ss[part]);
                   valTmp = new PotentialValue(fields[part], ss[part], m_X, grad, norms);
                   // also skip this part if the gradient is basically 0
-                  if (Numbers.zeroish(valTmp.gradientLength)) continue;
+                  if (Num.zeroish(valTmp.gradientLength)) continue;
                   // we always start with this stepsize, scaled up based on partition number...
                   dt = dt0 * (1 << part);
                   // see if the current step-size works; if not we'll halve it and try again...
@@ -499,8 +524,13 @@ public class Minimizer {
                   cont = true;
                   while (cont) {
                      // make sure we aren't below a threshold...
-                     if (Numbers.zeroish(dt))
-                        throw new Exception("Step-size decreased to effectively 0");
+                     if (Num.zeroish(dt)) {
+                        //throw new Exception("Step-size decreased to effectively 0");
+                        // we actually need to consider if we've reached a minimum here: if the
+                        // potential does not change, then we have reached some flat point. We only
+                        // need to worry about this on the outer loops, though.
+                        break;
+                     }
                      // take a single step...
                      takeStep(m_X, dt, grad, ss[part]);
                      // calculate the new gradient/potential
@@ -531,6 +561,12 @@ public class Minimizer {
             pe = val.potential;
             re.push(dtStep, val.gradientLength * dtStep, maxNorm, valTmp.potential - pe);
             maxNorm = norms[val.steepestVertex];
+            // check if we have reached a flat point
+            if (Num.eq(pe, peStep0)) {
+               // this is not considered an error for now: just exit gracefully
+               //throw new IllegalStateException("Gradient is effectively flat");
+               break;
+            }
          }
       } finally {
          re.freeze(val == null? pe : val.potential);

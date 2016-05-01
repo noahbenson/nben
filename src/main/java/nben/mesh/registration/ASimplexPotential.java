@@ -27,7 +27,6 @@ import nben.mesh.registration.IPotentialField;
 import nben.mesh.registration.IDifferentiatedFunction;
 
 import nben.util.Par;
-import nben.util.Numbers;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -355,7 +354,7 @@ public abstract class ASimplexPotential implements IPotentialField {
    protected ASimplexPotential(ASimplexPotential field, int[] ss) {
       this.subset           = (ss == null? field.allVertices : ss);
       this.simplexSubset    = (ss == null? field.allSimplices 
-                                         : subsampleSimplexIndex(ss, field.simplices));
+                                         : subsampleSimplexIndex(ss, field.simplexIndex));
       this.forms            = field.forms;
       this.simplices        = field.simplices;
       this.simplexIndex     = field.simplexIndex;
@@ -459,7 +458,7 @@ public abstract class ASimplexPotential implements IPotentialField {
       int[] ss;
       HashSet<Integer> q = new HashSet<Integer>();
       for (i = 0; i < subset.length; ++i) {
-         ss = index[subset[i]];
+          ss = index[subset[i]];
          if (ss != null) {
             for (j = 0; j < ss.length; ++j) 
                q.add(new Integer(ss[j]));

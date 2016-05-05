@@ -206,7 +206,7 @@
 (defmacro build
   "(build sym init-val [bindings...] expr) yields the result of calling expr with the given
      bindings (expressed as in a for statement); after each evaluation of expr, the result is bound
-     to the symbol sym, which is initially bound to init-val. The combine macro is to the reduce
+     to the symbol sym, which is initially bound to init-val. The build macro is to the reduce
      function as the for macro is to the map function.
    (build sym [bindings...] expr) is equivalent to (build sym nil [bindings...] expr)."
   ([sym init-val bindings expr]

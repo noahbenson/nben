@@ -276,7 +276,7 @@ public class MeshTopology {
                weights[i] = wgts[i] / tmp;
          }
       }
-      /** Interpolates from the vals and yields the result; ignore an masked vals. If all vals
+      /** Interpolates from the vals and yields the result; ignore any masked vals. If all vals
        *  relevant to a point are masked, set it to nullval.
        */
       public final double interpolate(double[] vals, double[] mask, double nullval) {
@@ -293,7 +293,7 @@ public class MeshTopology {
          if (tot == 0) return nullval;
          else          return res / tot;
       }
-      /** Interpolates from the vals and yields the result; ignore an masked vals. If all vals
+      /** Interpolates from the vals and yields the result; ignore any masked vals. If all vals
        *  relevant to a point are masked, set it to nullval.
        */
       public final double interpolate(double[] vals, int[] mask, double nullval) {

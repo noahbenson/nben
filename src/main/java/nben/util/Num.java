@@ -364,6 +364,58 @@ public final class Num {
       return Num._dot(u, v);
    }
 
+   /** Num.sqrt(u) yields the element-wise square-root of the vector or matrix u */
+   public static final double sqrt(double u) {return Math.sqrt(u);}
+   public static final double[] sqrt(double[] u) {
+      double[] v = new double[u.length];
+      for (int i = 0; i < u.length; ++i) v[i] = Math.sqrt(u[i]);
+      return v;
+   }
+   public static final double[][] sqrt(double[][] u) {
+      double[][] v = new double[u.length][];
+      for (int i = 0; i < u.length; ++i) v[i] = Num.sqrt(u[i]);
+      return v;
+   }
+
+   /** Num.sqr(u) yields the element-wise square of the vector or matrix u */
+   public static final double sqr(double u) {return u*u;}
+   public static final double[] sqr(double[] u) {
+      double[] v = new double[u.length];
+      for (int i = 0; i < u.length; ++i) v[i] = u[i]*u[i];
+      return v;
+   }
+   public static final double[][] sqr(double[][] u) {
+      double[][] v = new double[u.length][];
+      for (int i = 0; i < u.length; ++i) v[i] = Num.sqr(u[i]);
+      return v;
+   }
+
+   /** Num.exp(u) yields the element-wise exponential function of the vector or matrix u */
+   public static final double exp(double u) {return Math.exp(u);}
+   public static final double[] exp(double[] u) {
+      double[] v = new double[u.length];
+      for (int i = 0; i < u.length; ++i) v[i] = Math.exp(u[i]);
+      return v;
+   }
+   public static final double[][] exp(double[][] u) {
+      double[][] v = new double[u.length][];
+      for (int i = 0; i < u.length; ++i) v[i] = Num.exp(u[i]);
+      return v;
+   }
+
+   /** Num.log(u) yields the element-wise logarighm of the vector or matrix u */
+   public static final double log(double u) {return Math.log(u);}
+   public static final double[] log(double[] u) {
+      double[] v = new double[u.length];
+      for (int i = 0; i < u.length; ++i) v[i] = Math.log(u[i]);
+      return v;
+   }
+   public static final double[][] log(double[][] u) {
+      double[][] v = new double[u.length][];
+      for (int i = 0; i < u.length; ++i) v[i] = Num.log(u[i]);
+      return v;
+   }
+
    /** Num.is_matrix(u) yields true if the given object u is a matrix.
     *
     *  @param u a 2D double array
@@ -463,6 +515,40 @@ public final class Num {
       return v;
    }
 
+   /** Num._euclideanDistance2(a,b) is identical to Num.euclideanDistance2(a,b) except that it
+    *  performs no error checking.
+    */
+   public static final double _euclideanDistance2(double[] a, double[] b) {
+      double r = 0, d;
+      for (int i = 0; i < a.length; ++i) {
+         d = a[i] - b[i];
+         r += d*d;
+      }
+      return r;
+   }
+   /** Num._euclideanDistance(a,b) is identical to Num.euclideanDistance(a,b) except that it
+    *  performs no error checking.
+    */
+   public static final double _euclideanDistance(double[] a, double[] b) {
+      return Math.sqrt(_euclideanDistance2(a, b));
+   }
+   /** Num.euclideanDistance2(a, b) yields the appropriate squared Euclidean distance between for
+    *  the vectors a and b.
+    */
+   public static final double euclideanDistance2(double[] a, double[] b) {
+      if (a.length != b.length)
+         throw new IllegalArgumentException("Vectors must be of identical length");
+      return _euclideanDistance2(a, b);
+   }      
+   /** Num.euclideanDistance(a, b) yields the appropriate Euclidean distance between for the vectors
+    *  a and b.
+    */
+   public static final double euclideanDistance(double[] a, double[] b) {
+      if (a.length != b.length)
+         throw new IllegalArgumentException("Vectors must be of identical length");
+      return _euclideanDistance(a, b);
+   }      
+   
    /** Num._rows_norm2(u) is identical to Num.rows_norm2(u) except that it performs no
     *  error checking.
     */
@@ -652,6 +738,105 @@ public final class Num {
       return Math.acos(Num._dot(u, v));
    }
 
+   /** Num.add(u,v) yields the sum of the two vectors u and v.
+    */
+   public static final double[] add(double[] u, double[] v) {
+      double[] r = new double[u.length];
+      for (int i = 0; i < u.length; ++i) r[i] = u[i] + v[i];
+      return r;
+   }
+   public static final double[] add(double[] u, double v) {
+      double[] r = new double[u.length];
+      for (int i = 0; i < u.length; ++i) r[i] = u[i] + v;
+      return r;
+   }
+   public static final double[] add(double u, double[] v) {return Num.add(v, u);}
+   public static final double add(double u, double v) {return v + u;}
+   /** Num.opp(u) yields the opposite of u, -u. */
+   public static final double[] opp(double[] u) {
+      double[] r = new double[u.length];
+      for (int i = 0; i < u.length; ++i) r[i] = -u[i];
+      return r;
+   }
+   public static final double opp(double u) {return -u;}
+   /** Num.inv(u) yields the inverse of u, 1/u (elementwise). */
+   public static final double[] inv(double[] u) {
+      double[] r = new double[u.length];
+      for (int i = 0; i < u.length; ++i) r[i] = 1.0 / u[i];
+      return r;
+   }
+   public static final double inv(double u) {return 1.0 / u;}
+   /** Num.sub(u,v) yields the subtraction of the vector (u - v).
+    */
+   public static final double[] sub(double[] u, double[] v) {
+      double[] r = new double[u.length];
+      for (int i = 0; i < u.length; ++i) r[i] = u[i] + v[i];
+      return r;
+   }
+   public static final double[] sub(double[] u, double v) {
+      double[] r = new double[u.length];
+      for (int i = 0; i < u.length; ++i) r[i] = u[i] - v;
+      return r;
+   }
+   public static final double[] sub(double u, double[] v) {return Num.opp(Num.sub(v, u));}
+   public static final double sub(double u, double v) {return u - v;}
+   /** Num.mul(a,b) yields the product of a*b; this is done element-wise. */
+   public static final double[] mul(double[] u, double[] v) {
+      double[] r = new double[u.length];
+      for (int i = 0; i < u.length; ++i) r[i] = u[i] * v[i];
+      return r;
+   }
+   public static final double[] mul(double[] u, double v) {
+      double[] r = new double[u.length];
+      for (int i = 0; i < u.length; ++i) r[i] = u[i] * v;
+      return r;
+   }
+   public static final double[] mul(double u, double[] v) {return Num.mul(v, u);}
+   public static final double mul(double u, double v) {return u*v;}
+   /** Num.div(a,b) yields the division of a/b; this is done element-wise. */
+   public static final double[] div(double[] u, double[] v) {
+      double[] r = new double[u.length];
+      for (int i = 0; i < u.length; ++i) r[i] = u[i] / v[i];
+      return r;
+   }
+   public static final double[] div(double[] u, double v) {
+      double[] r = new double[u.length];
+      for (int i = 0; i < u.length; ++i) r[i] = u[i] / v;
+      return r;
+   }
+   public static final double[] div(double u, double[] v) {
+      double[] r = new double[v.length];
+      for (int i = 0; i < v.length; ++i) r[i] = u / v[i];
+      return r;
+   }
+   public static final double div(double u, double v) {return u/v;}
+
+   /** Num._det(u, v) is identical to Num.det(u,v) except that it does no error checking. */
+   public static final double _det(double[] u, double[] v) {
+      return u[0]*v[1] - u[1]*v[0];
+   }
+   /** Num.det(u, v) yields the determinant u[0]*v[1] - v[0]*u[1] of the matrix whose rows are
+    *  u and v. The vectors u and v must be 2D.
+    */
+   public static final double det(double[] u, double[] v) {
+      if (u.length != 2 || v.length != 2)
+         throw new IllegalArgumentException("arguments given to det(u,v) must be 2D vectors");
+      return Num._det(u,v);
+   }
+   /** Num._det(u, v, w) is identical to Num.det(u,v,w) except that it does no error checking. */
+   public static final double _det(double[] u, double[] v, double[] w) {
+      return u[0]*v[1]*w[2] + u[1]*v[2]*w[0] + u[2]*v[0]*w[1]
+          - (u[2]*v[1]*w[0] + u[1]*v[0]*w[2] + u[0]*v[2]*w[1]);
+   }
+   /** Num.det(u, v, w) yields the 3D determinant of the matrix whose rows are u, v, and w. The
+    *  vectors u, v, and w must be 3D.
+    */
+   public static final double det(double[] u, double[] v, double[] w) {
+      if (u.length != 3 || v.length != 3 || w.length != 3)
+         throw new IllegalArgumentException("arguments given to det(u,v,w) must be 3D vectors");
+      return Num._det(u,v,w);
+   }
+  
    /** Num._rotation_matrix_3d(x, theta) is identical to Num.rotation_matrix_3d except that it
     *  requires that the vector x be normalized to unit length; otherwise behavior is undefined.
     */

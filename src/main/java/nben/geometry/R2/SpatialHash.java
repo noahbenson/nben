@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // SpatialHash.java
 //
-// The nben.geometry.spherical namespace contains code used to represent and compute over spherical
-// geometry entities.
+// The nben.geometry.R2 namespace contains code used to represent and compute over planar geometryn
+// entities.
 //
 // Copyright (C) 2016 by Noah C. Benson.
 // This file is part of the nben JVM library.
@@ -18,7 +18,7 @@
 // You should have received a copy of the GNU General Public License along with this program.
 // If not, see <http://www.gnu.org/licenses/>.
 
-package nben.geometry.spherical;
+package nben.geometry.R2;
 
 import nben.util.Par;
 import nben.util.Num;
@@ -33,45 +33,29 @@ import java.util.HashMap;
 import java.util.Arrays;
 import java.util.Iterator;
 
-/** SpatialHash is a simple class that keeps track of meshes defined over spherical surfaces.
+/** SpatialHash is a simple class that keeps track of meshes defined in the plane.
  *  Its primary purpose is to enable quick lookup of the triangle in a mesh that contains a point,
  *  or to calculate overlap of shapes on the mesh.
- *  The mesh represents data internally as (x,y,z) coordinate vectors, but all data is assumed to
- *  be on the surface of a sphere; accordingly, all 3D cartesian data passed to SphereMeshHash is
- *  automatically normalized.
  *
  *  @author Noah C. Benson
  */
 public class SpatialHash {
-   /** hash.coordinates is an N x 3 matrix of coordinates which is referenced by the member 
-    *  variables points, greatCircles, ccwArcs, cwArcs, and triangles.
+   /** hash.coordinates is an N x 2 matrix of coordinates which is referenced by the member 
+    *  variables points, lines, segments, and triangles.
     */
    public final double[][] coordinates;
    /** The list of point-indices in the hash. */
    public final int[] points;
-   /** The n x 2 list of coordinates that pair into great circles in the hash. */
-   public final int[][] greatCircles;
-   /** The n x 2 list of counter-clockwise arc endpoints in the hash. */
-   public final int[][] ccwArcs;
-   /** The n x 2 list of clockwise arc endpoints in the hash. */
-   public final int[][] cwArcs;
+   /** The n x 2 list of coordinates that pair into lines in the hash. */
+   public final int[][] lines;
+   /** The n x 2 list of line segment endpoints in the hash. */
+   public final int[][] segments;
    /** The n x 3 list of triangle endpoints in the hash. */
    public final int[][] triangles;
    /** maxContents gives the max number of entities in a partition before it is divided */
    public final int maxContents;
    /** The root partition of the hash. */
    public final Partition root;
-
-   /** The triangles that make up the octants. */
-   private static final Triangle[] octantTriangles = new Triangle[] {
-      Triangle._from( Point._from( 1,  0, 0),   Point._from( 0,  1, 0),   Point._from(0, 0,  1) ),
-      Triangle._from( Point._from( 0,  1, 0),   Point._from(-1,  0, 0),   Point._from(0, 0,  1) ),
-      Triangle._from( Point._from(-1,  0, 0),   Point._from( 0, -1, 0),   Point._from(0, 0,  1) ),
-      Triangle._from( Point._from( 0, -1, 0),   Point._from( 1,  0, 0),   Point._from(0, 0,  1) ),
-      Triangle._from( Point._from( 1,  0, 0),   Point._from( 0, -1, 0),   Point._from(0, 0, -1) ),
-      Triangle._from( Point._from( 0, -1, 0),   Point._from(-1,  0, 0),   Point._from(0, 0, -1) ),
-      Triangle._from( Point._from(-1,  0, 0),   Point._from( 0,  1, 0),   Point._from(0, 0, -1) ),
-      Triangle._from( Point._from( 0,  1, 0),   Point._from( 1,  0, 0),   Point._from(0, 0, -1) )};
 
    private static final int[] integersToInts(List<Integer> l) {
       if (l == null || l.size() == 0) return null;
@@ -96,16 +80,15 @@ public class SpatialHash {
       return res;
    }
 
-   private final int[][] greatCircleIntersection(Point pt) {
-      if (greatCircles.length == 0) return null;
+   private final int[][] lineIntersection(Point pt) {
+      if (lines.length == 0) return null;
       List<Integer> igcs = new ArrayList<Integer>();
-      GreatCircle gc;
-      for (int i = 0; i < greatCircles.length; ++i) {
-         gc = GreatCircle._from(coordinates[greatCircles[i][0]],
-                                coordinates[greatCircles[i][1]]);
+      Line gc;
+      for (int i = 0; i < lines.length; ++i) {
+         gc = Line._from(coordinates[lines[i][0]], coordinates[lines[i][1]]);
          if (gc.contains(pt)) igcs.add(Integer.valueOf(i));
       }
-      return reconstructElements(igcs, greatCircles);
+      return reconstructElements(igcs, lines);
    }
 
    // Iterators for our elements...
@@ -119,37 +102,23 @@ public class SpatialHash {
       public Point next() {return Point._from(coordinates[points[i++]]);}
       public void remove() {throw new UnsupportedOperationException();}
    }
-   public final class GreatCircleIterator implements Iterator<GreatCircle> {
+   public final class LineIterator implements Iterator<Line> {
       private int i;
-      private GreatCircleIterator() {i = 0;}
-      public boolean hasNext() {return greatCircles != null && i < greatCircles.length;}
-      public GreatCircle next() {
-         int[] ids = greatCircles[i++];
-         return GreatCircle._from(coordinates[ids[0]], coordinates[ids[1]]);
+      private LineIterator() {i = 0;}
+      public boolean hasNext() {return lines != null && i < lines.length;}
+      public Line next() {
+         int[] ids = lines[i++];
+         return Line._from(coordinates[ids[0]], coordinates[ids[1]]);
       }
       public void remove() {throw new UnsupportedOperationException();}
    }
-   public final class ArcIterator implements Iterator<Arc> {
+   public final class LineSegmentIterator implements Iterator<LineSegment> {
       private int i;
-      private ArcIterator() {i = 0;}
-      public boolean hasNext() {
-         return i < (  (cwArcs == null ? 0 : cwArcs.length)
-                     + (ccwArcs == null? 0 : ccwArcs.length));
-      }
-      public Arc next() {
-         int[] ids;
-         if (ccwArcs == null) {
-            ids = cwArcs[i++];
-            return Arc._cw(coordinates[ids[0]], coordinates[ids[1]]);
-         } else {
-            if (i < ccwArcs.length) {
-               ids = ccwArcs[i++];
-               return Arc._ccw(coordinates[ids[0]], coordinates[ids[1]]);
-            } else {
-               ids = cwArcs[(i++) - ccwArcs.length];
-               return Arc._cw(coordinates[ids[0]], coordinates[ids[1]]);
-            }
-         }
+      private LineSegmentIterator() {i = 0;}
+      public boolean hasNext() {return segments != null && i < segments.length;}
+      public LineSegment next() {
+         int[] ids = segments[i++];
+         return LineSegment._from(coordinates[ids[0]], coordinates[ids[1]]);
       }
       public void remove() {throw new UnsupportedOperationException();}
    }
@@ -166,10 +135,10 @@ public class SpatialHash {
 
    /** hash.iteratePoints() yields an iterator over all the points in the given hash */
    public final PointIterator iteratePoints() {return new PointIterator();}
-   /** hash.iterateArcs() yields an iterator over all the arcs in the given hash */
-   public final ArcIterator iterateArcs() {return new ArcIterator();}
-   /** hash.iterateGreatCircless() yields an iterator over all the points in the given hash */
-   public final GreatCircleIterator iterateGreatCircles() {return new GreatCircleIterator();}
+   /** hash.iterateLineSegments() yields an iterator over all the arcs in the given hash */
+   public final LineSegmentIterator iterateLineSegments() {return new LineSegmentIterator();}
+   /** hash.iterateLiness() yields an iterator over all the points in the given hash */
+   public final LineIterator iterateLines() {return new LineIterator();}
    /** hash.iterate() yields an iterator over all the points in the given hash */
    public final TriangleIterator iterateTriangles() {return new TriangleIterator();}
 
@@ -178,17 +147,11 @@ public class SpatialHash {
       if (k < 0 || k > points.length) return null;
       return Point._from(coordinates[k]);
    }
-   /** hash.ccwArc(k) ields the k'th counter-clockwise arc element in the hash. */
-   public final Arc ccwArc(int k) {
-      if (k < 0 || k > ccwArcs.length) return null;
-      int[] id = ccwArcs[k];
-      return Arc._ccw(coordinates[id[0]], coordinates[id[1]]);
-   }
-   /** hash.cwArc(k) ields the k'th clockwise arc element in the hash. */
-   public final Arc cwArc(int k) {
-      if (k < 0 || k > cwArcs.length) return null;
-      int[] id = cwArcs[k];
-      return Arc._cw(coordinates[id[0]], coordinates[id[1]]);
+   /** hash.segment(k) yields the k'th line segment element in the hash. */
+   public final LineSegment segment(int k) {
+      if (k < 0 || k > segments.length) return null;
+      int[] id = segments[k];
+      return LineSegment._from(coordinates[id[0]], coordinates[id[1]]);
    }
    /** hash.triangle(k) ields the k'th triangle element in the hash. */
    public final Triangle triangle(int k) {
@@ -197,27 +160,24 @@ public class SpatialHash {
       return Triangle._from(coordinates[id[0]], coordinates[id[1]], coordinates[id[2]]);
    }
 
-   /** hash.intersection(p) yields a SpatialHash that contains only the spherical elements that 
+   /** hash.intersection(p) yields a SpatialHash that contains only the planar elements that 
     *  intersect the given point p. If there is no intersection, null is returned.
     */
    public final SpatialHash intersection(Point p) {
       Map<Integer,Integer> ipts  = new HashMap<Integer,Integer>();
-      Map<Integer,Integer> iccws = new HashMap<Integer,Integer>();
-      Map<Integer,Integer> icws  = new HashMap<Integer,Integer>();
+      Map<Integer,Integer> isegs = new HashMap<Integer,Integer>();
       Map<Integer,Integer> itris = new HashMap<Integer,Integer>();
       List<Integer> lpts  = new ArrayList<Integer>();
-      List<Integer> lccws = new ArrayList<Integer>();
-      List<Integer> lcws  = new ArrayList<Integer>();
+      List<Integer> lsegs = new ArrayList<Integer>();
       List<Integer> ltris = new ArrayList<Integer>();
       Partition newRoot = root.intersection(p, this, 
-                                            ipts, iccws, icws, itris,
-                                            lpts, lccws, lcws, ltris);
+                                            ipts, isegs, itris,
+                                            lpts, lsegs, ltris);
       if (newRoot == null) return null;
       return new SpatialHash(coordinates,
                              reconstructElements(lpts, points),
-                             greatCircleIntersection(p),
-                             reconstructElements(lccws, ccwArcs),
-                             reconstructElements(lcws, cwArcs),
+                             lineIntersection(p),
+                             reconstructElements(lsegs, segments),
                              reconstructElements(ltris, triangles),
                              maxContents,
                              newRoot);
@@ -233,8 +193,8 @@ public class SpatialHash {
       Map<Integer,Integer> itris = new HashMap<Integer,Integer>();
       List<Integer> ltris = new ArrayList<Integer>();
       Partition newRoot = root.intersection(p, this, 
-                                            null, null, null, itris,
-                                            null, null, null, ltris);
+                                            null, null, itris,
+                                            null, null, ltris);
       if (newRoot == null) return -1;
       return ltris.iterator().next().intValue();
    }
@@ -250,47 +210,30 @@ public class SpatialHash {
    }
 
    protected SpatialHash(double[][] coords, 
-                         int[] pts, int[][] gcs, int[][] ccws, int[][] cws, int[][] tris,
+                         int[] pts, int[][] lns, int[][] segs, int[][] tris,
                          int mx,
                          Partition prt) {
       coordinates = coords;
-      points       = (pts  == null ? new int[0]    : pts);
-      greatCircles = (gcs  == null ? new int[0][0] : gcs);
-      ccwArcs      = (ccws == null ? new int[0][0] : ccws);
-      cwArcs       = (cws  == null ? new int[0][0] : cws);
-      triangles    = (tris == null ? new int[0][0] : tris);
-      maxContents  = mx;
+      points      = (pts  == null ? new int[0]    : pts);
+      lines       = (lns  == null ? new int[0][0] : lns);
+      segments    = (segs == null ? new int[0][0] : segs);
+      triangles   = (tris == null ? new int[0][0] : tris);
+      maxContents = mx;
       root = (prt == null? new Partition(this) : prt);
-   }
-
-   // split a triangle into 4 subtriangles
-   public static final Triangle[] splitTriangle(Triangle t) {
-      // we can construct this by taking the midpoint of each side and making four triangles out of
-      // the original vertices plus these midpoints
-      Point midAB = t.arcAB().midpoint();
-      Point midBC = t.arcBC().midpoint();
-      Point midCA = t.arcCA().midpoint();
-      Triangle[] parts = new Triangle[4];
-      parts[0] = Triangle._from(t.A, midAB, midCA);
-      parts[1] = Triangle._from(t.B, midBC, midAB);
-      parts[2] = Triangle._from(t.C, midCA, midBC);
-      parts[3] = Triangle._from(midAB, midBC, midCA);
-      return parts;
    }
 
    // the class that stores the sphere partitions
    public static final class Partition {
-      // the triangle that contains this partition
-      public final Triangle boundary;
+      // How we define the relevant quadrant
+      public final Rectangle boundary;
 
-      // points, arcs, etc. that lie in this partition
+      // points, segments, etc. that lie in this partition
       public final int[] pts;
-      public final int[] ccws;
-      public final int[] cws;
+      public final int[] segs;
       public final int[] tris;
 
-      // children partitions; children are always 4 in number and are numbered by the vertex 0-2
-      // they are closest to followed by partition 3, the center partition
+      // children partitions; children are always 4 in number and are numbered in the traditional
+      // quadrant order
       public final Partition[] children;
 
       // used by the intersection function below to keep track of things
@@ -309,15 +252,17 @@ public class SpatialHash {
       public final Partition intersection(Point p,
                                           SpatialHash core,
                                           Map<Integer,Integer> hpts,
-                                          Map<Integer,Integer> hccws,
-                                          Map<Integer,Integer> hcws,
+                                          Map<Integer,Integer> hsegs,
                                           Map<Integer,Integer> htris,
                                           List<Integer> lpts,
-                                          List<Integer> lccws,
-                                          List<Integer> lcws,
+                                          List<Integer> lsegs,
                                           List<Integer> ltris) {
          // if the point isn't inside our boundary, we can stop here
-         if (boundary != null && boundary.relation_to(p) != 1) return null;
+         if (p.coords[0] < boundary.lowerLeft.coords[0]  ||
+             p.coords[1] < boundary.lowerLeft.coords[1]  ||
+             p.coords[0] > boundary.upperRight.coords[0] ||
+             p.coords[1] > boundary.upperRight.coords[1])
+            return null;
          int i, j;
          Partition[] newChildren = null;
          // we want to, first, pass down the query to our childrenn
@@ -327,8 +272,8 @@ public class SpatialHash {
             for (i = 0; i < children.length; ++i) {
                if (children[i] != null) {
                   tmp[i] = children[i].intersection(p, core,
-                                                    hpts, hccws, hcws, htris, 
-                                                    lpts, lccws, lcws, ltris);
+                                                    hpts, hsegs, htris, 
+                                                    lpts, lsegs, ltris);
                   if (tmp[i] != null) ++j;
                }
             }
@@ -341,11 +286,10 @@ public class SpatialHash {
             }
          }
          // okay, now we check our own members...
-         Arc arc;
+         LineSegment seg;
          Triangle tri;
          List<Integer> mypts  = new ArrayList<Integer>();
-         List<Integer> myccws = new ArrayList<Integer>();
-         List<Integer> mycws  = new ArrayList<Integer>();
+         List<Integer> mysegs = new ArrayList<Integer>();
          List<Integer> mytris = new ArrayList<Integer>();
          if (pts != null && hpts != null) {
             for (i = 0; i < pts.length; ++i) {
@@ -354,22 +298,13 @@ public class SpatialHash {
                   mypts.add(findIntFor(hpts, lpts, j));
             }
          }
-         if (ccws != null && hccws != null) {
-            for (i = 0; i < ccws.length; ++i) {
-               j = ccws[i];
-               arc = Arc._ccw(core.coordinates[core.ccwArcs[j][0]], 
-                              core.coordinates[core.ccwArcs[j][1]]);
-               if (arc.contains(p))
-                  myccws.add(findIntFor(hccws, lccws, j));
-            }
-         }
-         if (cws != null && hcws != null) {
-            for (i = 0; i < cws.length; ++i) {
-               j = cws[i];
-               arc = Arc._cw(core.coordinates[core.cwArcs[j][0]],
-                             core.coordinates[core.cwArcs[j][1]]);
-               if (arc.contains(p))
-                  mycws.add(findIntFor(hcws, lcws, j));
+         if (segs != null && segs != null) {
+            for (i = 0; i < segs.length; ++i) {
+               j = segs[i];
+               seg = LineSegment._from(core.coordinates[core.segments[j][0]],
+                                       core.coordinates[core.segments[j][1]]);
+               if (seg.contains(p))
+                  mysegs.add(findIntFor(hsegs, lsegs, j));
             }
          }
          if (tris != null && htris != null) {
@@ -384,19 +319,18 @@ public class SpatialHash {
          }
          // last step is to make the new partition:
          // we may not have anything in this particular partition...
-         if (mytris.isEmpty() && myccws.isEmpty() && mycws.isEmpty() && mypts.isEmpty()) {
+         if (mytris.isEmpty() && mysegs.isEmpty() && mypts.isEmpty()) {
             // if we have no children, just return null
             if (newChildren == null) return null;
             // we have children, but if there's just one, return it
             else if (newChildren.length == 1) return newChildren[0];
             // otherwise, we have to make a new simple partition
-            else return new Partition(boundary, null, null, null, null, newChildren);
+            else return new Partition(boundary, null, null, null, newChildren);
          }
          // otherwise, we have some amount of data and some children, just make the partition:
          return new Partition(boundary,
                               integersToInts(mypts),
-                              integersToInts(myccws),
-                              integersToInts(mycws),
+                              integersToInts(mysegs),
                               integersToInts(mytris),
                               newChildren);
       }
@@ -404,12 +338,12 @@ public class SpatialHash {
       // partitioning data stored as we perform partitioning of the sphere surface
       private abstract class BuildData implements Runnable {
          public SpatialHash              core;
-         public Triangle[]               boundaries;
+         public Rectangle[]              boundaries;
          public int[]                    idcs;
          public ArrayList<List<Integer>> contents;
          public List<Integer>            leftover;
 
-         public BuildData(SpatialHash c, int[] is, Triangle[] bounds) {
+         public BuildData(SpatialHash c, int[] is, Rectangle[] bounds) {
             core = c;
             idcs = is;
             boundaries = bounds;
@@ -419,7 +353,7 @@ public class SpatialHash {
                contents.add(i, new ArrayList<Integer>());
             leftover = new ArrayList<Integer>();
          }
-         public BuildData(SpatialHash c, int sz, Triangle[] bounds) {
+         public BuildData(SpatialHash c, int sz, Rectangle[] bounds) {
             this(c, Num.range(sz), bounds);
          }
          // BuildData objects can be run (for parallelization via nben.util.Par);
@@ -457,10 +391,10 @@ public class SpatialHash {
             }
          }
          // this function must be overloaded; a return value of 1 means that the appropriate object
-         // for the given index is entirely in the given triangle; a result of 0 means it is on the
-         // boundary or straddles the boundary (neither entirely in or out of the triangle), and a 
-         // result of -1 indicates that it is entirely outside the triangle.
-         abstract public int relation(Triangle t, int idx);
+         // for the given index is entirely in the given rectangle; a result of 0 means it is on the
+         // boundary or straddles the boundary (neither entirely in or out of the rectangle), and a 
+         // result of -1 indicates that it is entirely outside the rectangle.
+         abstract public int relation(Rectangle t, int idx);
          // convert this build data to a list of partition contents, after the run() above; if any
          // partition contains no elements, then null is returned for that partition
          public final int[][] freeze() {
@@ -475,77 +409,104 @@ public class SpatialHash {
          }
       }
       private class BuildDataPoints extends BuildData {
-         public BuildDataPoints(SpatialHash c, int[] is, Triangle[] bounds) {super(c, is, bounds);}
-         public int relation(Triangle t, int idx) {
+         public BuildDataPoints(SpatialHash c, int[] is, Rectangle[] bounds) {super(c, is, bounds);}
+         public int relation(Rectangle t, int idx) {
             return t.relation_to(Point._from(core.coordinates[core.points[idx]]));
          }
       }
-      private class BuildDataCCWArcs extends BuildData {
-         public BuildDataCCWArcs(SpatialHash c, int[] is, Triangle[] bounds) {super(c, is, bounds);}
-         public int relation(Triangle t, int idx) {
-            return t.relation_to(Arc._ccw(core.coordinates[core.ccwArcs[idx][0]],
-                                          core.coordinates[core.ccwArcs[idx][1]]));
+      private class BuildDataLineSegments extends BuildData {
+         public BuildDataLineSegments(SpatialHash c, int[] is, Rectangle[] bounds) {
+            super(c, is, bounds);
          }
-      }
-      private class BuildDataCWArcs extends BuildData {
-         public BuildDataCWArcs(SpatialHash c, int[] is, Triangle[] bounds) {super(c, is, bounds);}
-         public int relation(Triangle t, int idx) {
-            return t.relation_to(Arc._cw(core.coordinates[core.cwArcs[idx][0]],
-                                         core.coordinates[core.cwArcs[idx][1]]));
+         public int relation(Rectangle t, int idx) {
+            return t.relation_to(LineSegment._from(core.coordinates[core.segments[idx][0]],
+                                                   core.coordinates[core.segments[idx][1]]));
          }
       }
       private class BuildDataTriangles extends BuildData {
-         public BuildDataTriangles(SpatialHash c, int[] is, Triangle[] bounds) {
+         public BuildDataTriangles(SpatialHash c, int[] is, Rectangle[] bounds) {
             super(c, is, bounds);
          }
-         public int relation(Triangle t, int idx) {
+         public int relation(Rectangle t, int idx) {
             return t.relation_to(Triangle._from(core.coordinates[core.triangles[idx][0]],
                                                 core.coordinates[core.triangles[idx][1]],
                                                 core.coordinates[core.triangles[idx][2]]));
          }
       }
+
+      private static final Rectangle[] split(Rectangle r, double[] mid) {
+         Point p = Point._from(mid);
+         return new Rectangle[] {
+            Rectangle.from(p, r.upperRight),
+            Rectangle.from(Point._from(r.lowerLeft.coords[0], p.coords[1]),
+                           Point._from(p.coords[0], r.upperRight.coords[1])),
+            Rectangle.from(r.lowerLeft, p),
+            Rectangle.from(Point._from(p.coords[0], r.lowerLeft.coords[1]),
+                           Point._from(r.upperRight.coords[0], p.coords[1]))};
+      }
       
       // construct from parent:
-      private Partition(SpatialHash core, Triangle t,
-                        int[] pts0, int[] ccws0, int[] cws0, int[] tris0) {
+      private Partition(SpatialHash core, Rectangle t,
+                        int[] pts0, int[] segs0, int[] tris0) {
          boundary = t;
-         Triangle[] parts = (t == null? octantTriangles : splitTriangle(t));
+         double[] mid = new double[2];
+         int midcount = 0, i;
+         if (pts0 != null) for (i = 0; i < pts0.length; ++i) {
+               ++midcount;
+               mid[0] += core.coordinates[pts0[i]][0];
+               mid[1] += core.coordinates[pts0[i]][1];
+            }
+         if (segs0 != null) for (i = 0; i < segs0.length; ++i) {
+               midcount += 2;
+               mid[0] += core.coordinates[core.segments[segs0[i]][0]][0];
+               mid[1] += core.coordinates[core.segments[segs0[i]][0]][1];
+               mid[0] += core.coordinates[core.segments[segs0[i]][1]][0];
+               mid[1] += core.coordinates[core.segments[segs0[i]][1]][1];
+            }
+         if (tris0 != null) for (i = 0; i < tris0.length; ++i) {
+               midcount += 3;
+               mid[0] += core.coordinates[core.triangles[tris0[i]][0]][0];
+               mid[1] += core.coordinates[core.triangles[tris0[i]][0]][1];
+               mid[0] += core.coordinates[core.triangles[tris0[i]][1]][0];
+               mid[1] += core.coordinates[core.triangles[tris0[i]][1]][1];
+               mid[0] += core.coordinates[core.triangles[tris0[i]][2]][0];
+               mid[1] += core.coordinates[core.triangles[tris0[i]][2]][1];
+            }
+         if (midcount > 0) {
+            mid[0] /= midcount;
+            mid[1] /= midcount;
+         }
+         Rectangle[] parts = split(t, mid);
          // we start out with a list of everything (though this will diminish...)
-         BuildDataPoints    bdpts  = new BuildDataPoints   (core, pts0,  parts);
-         BuildDataCCWArcs   bdccws = new BuildDataCCWArcs  (core, ccws0, parts);
-         BuildDataCWArcs    bdcws  = new BuildDataCWArcs   (core, cws0,  parts);
-         BuildDataTriangles bdtris = new BuildDataTriangles(core, tris0, parts);
+         BuildDataPoints       bdpts  = new BuildDataPoints(      core, pts0,  parts);
+         BuildDataLineSegments bdsegs = new BuildDataLineSegments(core, segs0, parts);
+         BuildDataTriangles    bdtris = new BuildDataTriangles(   core, tris0, parts);
 
          // run these...
-         bdpts  = new BuildDataPoints(    core, pts0,  parts);
-         bdccws = new BuildDataCCWArcs(   core, ccws0, parts);
-         bdcws  = new BuildDataCWArcs(    core, cws0,  parts);
-         bdtris = new BuildDataTriangles( core, tris0, parts);
+         bdpts  = new BuildDataPoints(      core, pts0,  parts);
+         bdsegs = new BuildDataLineSegments(core, segs0, parts);
+         bdtris = new BuildDataTriangles(   core, tris0, parts);
          bdpts.run();
-         bdccws.run();
-         bdcws.run();
+         bdsegs.run();
          bdtris.run();
          pts  = integersToInts(bdpts.leftover);
-         ccws = integersToInts(bdccws.leftover);
-         cws  = integersToInts(bdcws.leftover);
+         segs = integersToInts(bdsegs.leftover);
          tris = integersToInts(bdtris.leftover);
          int[][] 
             finpts  = bdpts.freeze(),
-            finccws = bdccws.freeze(),
-            fincws  = bdcws.freeze(),
+            finsegs = bdsegs.freeze(),
             fintris = bdtris.freeze();
          // make the children...
          Partition[] chldn = new Partition[parts.length];
          int c = 0;
-         for (int i = 0; i < chldn.length; ++i) {
+         for (i = 0; i < chldn.length; ++i) {
             if ((finpts[i] == null || finpts[i].length == 0)
-                && (finccws[i] == null || finccws[i].length == 0)
-                && (fincws[i] == null || fincws[i].length == 0)
+                && (finsegs[i] == null || finsegs[i].length == 0)
                 && (fintris[i] == null || fintris[i].length == 0))
                chldn[i] = null;
             else {
                chldn[i] = new Partition(core, parts[i],
-                                        finpts[i], finccws[i], fincws[i], fintris[i]);
+                                        finpts[i], finsegs[i], fintris[i]);
                ++c;
             }
          }
@@ -557,36 +518,37 @@ public class SpatialHash {
       private Partition(SpatialHash core) {
          this(core, null, 
               Num.range(core.points    == null? 0 : core.points.length),
-              Num.range(core.ccwArcs   == null? 0 : core.ccwArcs.length),
-              Num.range(core.cwArcs    == null? 0 : core.cwArcs.length),
+              Num.range(core.segments  == null? 0 : core.segments.length),
               Num.range(core.triangles == null? 0 : core.triangles.length));
       }
       // construct a partition quickly when we know what goes in it
-      private Partition(Triangle t,
-                        int[] pts0, int[] ccws0, int[] cws0, int[] tris0,
+      private Partition(Rectangle t,
+                        int[] pts0, int[] segs0, int[] tris0,
                         Partition[] chldn) {
          boundary = t;
          pts = pts0;
-         ccws = ccws0;
-         cws = cws0;
+         segs = segs0;
          tris = tris0;
          children = chldn;
       }
    }
 
-   /** SpatialHash.from(coords, pointIndices, arcIndices, triangleIndices) yields a new spatial hash
-    *  containing the points indexed by coords[i] for i in pointIndices, the ccw arcs indexed by 
-    *  (coord[arcIndices[i][0]], coord[arcIndices[i][1]]), and the triangles similarly indexed by
+   /** SpatialHash.from(coords, pointIndices, segIndices, triangleIndices) yields a new spatial hash
+    *  containing the points indexed by coords[i] for i in pointIndices, the segments are indexed by
+    *  (coord[segIndices[i][0]], coord[segIndices[i][1]]), and the triangles similarly indexed by
     *  the n x 3 trianglesIndices matrix. Not all elements in coords needs to be used. This method
     *  copies its arguments.
     */
-   public static final SpatialHash from(double[][] coords, int[] pts, int[][] ccws, int[][] tris) {
+   public static final SpatialHash from(double[][] coords, int[] pts, int[][] segs, int[][] tris) {
       // fix up the coordinates matrix:
-      if (!Num.is_matrix(coords) || coords[0].length != 3)
-         throw new IllegalArgumentException("coords matrix must be n x 3");
+      if (!Num.is_matrix(coords) || coords[0].length != 2)
+         throw new IllegalArgumentException("coords matrix must be n x 2");
       int n = coords.length, i;
-      double[][] newCoords = new double[n][];
-      for (i = 0; i < n; ++i) newCoords[i] = Num.normalized(coords[i]);
+      double[][] newCoords = new double[n][2];
+      for (i = 0; i < n; ++i) {
+         newCoords[i][0] = coords[i][0];
+         newCoords[i][1] = coords[i][1];
+      }
       // fix up pts:
       int[] newPts = null;
       if (pts != null) {
@@ -595,16 +557,16 @@ public class SpatialHash {
             if (pts[i] >= n) throw new IllegalArgumentException("pointIndex[" + i + "] out of range");
             else newPts[i] = pts[i];
       }
-      // fix up ccws:
-      int[][] newCcws = null;
-      if (ccws != null) {
-         ccws = new int[ccws.length][2];
-         for (i = 0; i < ccws.length; ++i)
-            if (ccws[i][0] >= n || ccws[i][1] >= n || ccws[i][0] < 0 || ccws[i][1] < 0)
+      // fix up segs:
+      int[][] newSegs = null;
+      if (segs != null) {
+         segs = new int[segs.length][2];
+         for (i = 0; i < segs.length; ++i)
+            if (segs[i][0] >= n || segs[i][1] >= n || segs[i][0] < 0 || segs[i][1] < 0)
                throw new IllegalArgumentException("arcIndex[" + i + "] out of range.");
             else {
-               newCcws[i][0] = ccws[i][0];
-               newCcws[i][1] = ccws[i][1];
+               newSegs[i][0] = segs[i][0];
+               newSegs[i][1] = segs[i][1];
             }
       }
       // fix up tris:
@@ -622,12 +584,12 @@ public class SpatialHash {
             }
       }
       // make the hash:
-      return _from(newCoords, newPts, newCcws, newTris);
+      return _from(newCoords, newPts, newSegs, newTris);
    }
    /** SpatialHash._from(coords, pts, arcs, tris) is equivalent to the from version of the function
     *  except that it doesn't check or copy its arguments.
     */
-   public static final SpatialHash _from(double[][] coords, int[] pts, int[][] ccws, int[][] tris) {
-      return new SpatialHash(coords, pts, null, ccws, null, tris, 64, null);
+   public static final SpatialHash _from(double[][] coords, int[] pts, int[][] segs, int[][] tris) {
+      return new SpatialHash(coords, pts, null, segs, tris, 64, null);
    }
 }

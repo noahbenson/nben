@@ -84,12 +84,12 @@
 
 ;; --> set ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (import-vars [nben.util.set key-set entry-set range-set union isect map-union map-isect set-union 
-                           set-isect outer])
+                            set-isect outer])
 (import-vars [clojure.set map-invert])
 
 ;; --> iterator ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (import-vars [nben.util.iterator iterator for-all? for-any? for-none? for-not-all? build sum
-                                product])
+                                 product])
 
 ;; --> structured ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (import-all-vars nben.util.structured)

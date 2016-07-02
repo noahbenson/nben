@@ -40,7 +40,7 @@ import java.util.Arrays;
  */
 public final class Num {
 
-   static final double ZERO_TOL = 1e-30;
+   static final double ZERO_TOL = 1e-12;
    static private final double ZERO_TOL_2 = ZERO_TOL*ZERO_TOL;
 
    /** Num.zeroish(x) yields true if the absolute value of x is less than or equal to the
@@ -49,7 +49,7 @@ public final class Num {
     *  @param x the number whose closeness to zero should be tested
     *  @returns true if Math.abs(x) is less than Num.ZERO_TOL, otherwise false.
     */
-   public static final boolean zeroish(double x) {return x*x < ZERO_TOL_2;}
+   public static final boolean zeroish(double x) {return Math.abs(x) < ZERO_TOL;}
    /** Num.zeroish(x, tol) yields true if the absolute value of x is less than or equal to the
     *  magnitude of tol. The actual check performed is x*x less than tol*tol.
     *
@@ -57,7 +57,7 @@ public final class Num {
     *  @param tol tolerance cutoff to which x should be compared
     *  @returns true if Math.abs(x) is less than tol, otherwise false.
     */
-   public static final boolean zeroish(double x, double tol) {return x*x < tol*tol;}
+   public static final boolean zeroish(double x, double tol) {return Math.abs(x) < tol;}
    /** Num.zeroish(x) yields an array of boolean values the same length as the array x, each
     *  element of which is true if the absolute value of the equivalent value in x is less than or
     *  equal to the value Num.ZERO_TOL (equal to 1e-30).
@@ -69,7 +69,7 @@ public final class Num {
    static final boolean[] zeroish(double[] x) {
       if (x == null) return null;
       boolean[] q = new boolean[x.length];
-      for (int i = 0; i < x.length; ++i) q[i] = x[i]*x[i] < ZERO_TOL_2;
+      for (int i = 0; i < x.length; ++i) q[i] = Math.abs(x[i]) < ZERO_TOL;
       return q;
    }
    /** Num.zeroish(x, tol) yields an array of boolean values the same length as the array x,

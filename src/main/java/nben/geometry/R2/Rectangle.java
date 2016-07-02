@@ -119,7 +119,11 @@ public class Rectangle {
             return 0;
          else
             return 1;
-      } else if (cA || cB) {
+      } else if (cA || cB ||
+                 lib.intersection(a, segLower()) != null ||
+                 lib.intersection(a, segUpper()) != null ||
+                 lib.intersection(a, segLeft()) != null  ||
+                 lib.intersection(a, segRight()) != null) {
          return 0;
       } else {
          return -1;
@@ -145,8 +149,9 @@ public class Rectangle {
             return 0;
          else
             return -1;
-      } else if (relA == 1 || relB == 1 || relC == 1) return 1;
-      else
+      } else if (relA == 1 && relB == 1 && relC == 1) {
+         return 1;
+      } else
          return 0;
    }
    /** rect.relation_to(t) yields 1 if the rectangle t is inside the rectangle rect, 0 if it is on
@@ -162,7 +167,6 @@ public class Rectangle {
          ul = relation_to(Point._from(t.lowerLeft.coords[0], t.upperRight.coords[1])),
          ur = relation_to(t.upperRight),
          lr = relation_to(Point._from(t.upperRight.coords[0], t.lowerLeft.coords[1]));
-      
       if (ll == 1 && ul == 1 && ur == 1 && lr == 1) {
          return 1;
       } else if (ll == -1 && ul == -1 && ur == -1 && lr == -1) {

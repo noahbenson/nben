@@ -142,11 +142,11 @@ public class Triangle {
          else return -1;
       }
       double a0 = Triangle._from(q, A, B).area();
-      if (a0 > a) return -1;
+      if (Num.positive(a0 - a)) return -1;
       double a1 = Triangle._from(q, B, C).area();
-      if (a1 + a0 > a) return -1;
+      if (Num.positive(a1 + a0 - a)) return -1;
       double a2 = Triangle._from(q, C, A).area();
-      if (a2 + a1 + a0 > a) return -1;
+      if (Num.positive(a2 + a1 + a0 - a)) return -1;
       if (Num.zeroish(a0) || Num.zeroish(a1) || Num.zeroish(a2)) return 0;
       else return 1;
    }
@@ -179,7 +179,7 @@ public class Triangle {
           || a.intersectionPoint(segBC()) != null
           || a.intersectionPoint(segCA()) != null)
          return 0;
-      // otherwise, a is inside the triangle iff either of a's vertices are inside the triangle
+      // otherwise, a is inside the triangle only if both of a's vertices are inside the triangle
       boolean cntA = contains(a.A);
       boolean cntB = contains(a.B);
       if (cntA && cntB) return 1;

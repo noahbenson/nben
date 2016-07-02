@@ -34,7 +34,7 @@ public final class lib {
     *  null is returned, unless the lines are equal, in which case the first argument is returned..
     */
    public static final Object intersection(Line a, Line b) {
-      double[] q1 = a.A.coords, q2 = b.B.coords,
+      double[] q1 = a.A.coords, q2 = a.B.coords,
                q3 = b.A.coords, q4 = b.B.coords;
       double det12 = Num.det(q1, q2),
              det34 = Num.det(q3, q4);

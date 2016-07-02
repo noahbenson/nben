@@ -44,10 +44,14 @@ public class Line {
    /** g.contains(p) yields true if the line g contaings the point p. */
    public final boolean contains(Point p) {
       double
-         dAP = Num.euclideanDistance(A.coords, p.coords),
-         dBP = Num.euclideanDistance(B.coords, p.coords);
-      double d = dAP + dBP;
-      return Num.eq(d*d, Num.euclideanDistance2(A.coords, B.coords));
+         dx1 = p.coords[0] - A.coords[0],
+         dy1 = p.coords[1] - A.coords[1],
+         dx2 = B.coords[0] - p.coords[0],
+         dy2 = B.coords[1] - p.coords[1];
+      if ((Num.zeroish(dx1) && Num.zeroish(dy1)) || (Num.zeroish(dx2) && Num.zeroish(dy2)))
+         return true;
+      else
+         return Num.eq(dx1*dy2, dx2*dy1);
    }
    /** g.contains(a) yields true if the line g contains the line segment a. */
    public final boolean contains(LineSegment s) {

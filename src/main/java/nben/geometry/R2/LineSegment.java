@@ -47,15 +47,10 @@ public class LineSegment {
    }
    /** a.contains(p) yields true if the arc a contains the point p, otherwise false. */
    public final boolean contains(Point p) {
+      if (!line().contains(p)) return false;
       double d = norm2();
-      double dAP = Num.euclideanDistance2(A.coords, p.coords);
-      if (dAP > d) return false;
-      double dBP = Num.euclideanDistance2(B.coords, p.coords);
-      if (dBP > d) return false;
-      dAP = Math.sqrt(dAP);
-      dBP = Math.sqrt(dBP);
-      dAP += dBP;
-      return Num.eq(d, dAP*dAP);
+      return Num.nonnegative(d - Num.euclideanDistance2(p.coords, A.coords))
+         &&  Num.nonnegative(d - Num.euclideanDistance2(p.coords, B.coords));
    }
    /** a.contains(b) yields true if the line segment a contains the line segment b, otherwise
     *  false.

@@ -448,34 +448,81 @@ public class SpatialHash {
       // construct from parent:
       private Partition(SpatialHash core, Rectangle t,
                         int[] pts0, int[] segs0, int[] tris0) {
-         boundary = t;
-         double[] mid = new double[2];
+         double[]
+            mid = new double[2],
+            min = new double[2],
+            max = new double[2],
+            tmp = new double[2];
+         max[0] = Double.MIN_VALUE;
+         max[1] = Double.MIN_VALUE;
+         min[0] = Double.MAX_VALUE;
+         min[1] = Double.MAX_VALUE;
          int midcount = 0, i;
          if (pts0 != null) for (i = 0; i < pts0.length; ++i) {
                ++midcount;
-               mid[0] += core.coordinates[pts0[i]][0];
-               mid[1] += core.coordinates[pts0[i]][1];
+               tmp = core.coordinates[pts0[i]];
+               mid[0] += tmp[0];
+               mid[1] += tmp[1];
+               if (max[0] < tmp[0]) max[0] = tmp[0];
+               if (max[1] < tmp[1]) max[1] = tmp[1];
+               if (min[0] > tmp[0]) min[0] = tmp[0];
+               if (min[1] > tmp[1]) min[1] = tmp[1];
             }
          if (segs0 != null) for (i = 0; i < segs0.length; ++i) {
                midcount += 2;
-               mid[0] += core.coordinates[core.segments[segs0[i]][0]][0];
-               mid[1] += core.coordinates[core.segments[segs0[i]][0]][1];
-               mid[0] += core.coordinates[core.segments[segs0[i]][1]][0];
-               mid[1] += core.coordinates[core.segments[segs0[i]][1]][1];
+
+               tmp = core.coordinates[core.segments[segs0[i]][0]];
+               mid[0] += tmp[0];
+               mid[1] += tmp[1];
+               if (max[0] < tmp[0]) max[0] = tmp[0];
+               if (max[1] < tmp[1]) max[1] = tmp[1];
+               if (min[0] > tmp[0]) min[0] = tmp[0];
+               if (min[1] > tmp[1]) min[1] = tmp[1];
+
+               tmp = core.coordinates[core.segments[segs0[i]][1]];
+               mid[0] += tmp[0];
+               mid[1] += tmp[1];
+               if (max[0] < tmp[0]) max[0] = tmp[0];
+               if (max[1] < tmp[1]) max[1] = tmp[1];
+               if (min[0] > tmp[0]) min[0] = tmp[0];
+               if (min[1] > tmp[1]) min[1] = tmp[1];
             }
          if (tris0 != null) for (i = 0; i < tris0.length; ++i) {
                midcount += 3;
-               mid[0] += core.coordinates[core.triangles[tris0[i]][0]][0];
-               mid[1] += core.coordinates[core.triangles[tris0[i]][0]][1];
-               mid[0] += core.coordinates[core.triangles[tris0[i]][1]][0];
-               mid[1] += core.coordinates[core.triangles[tris0[i]][1]][1];
-               mid[0] += core.coordinates[core.triangles[tris0[i]][2]][0];
-               mid[1] += core.coordinates[core.triangles[tris0[i]][2]][1];
+
+               tmp = core.coordinates[core.triangles[tris0[i]][0]];
+               mid[0] += tmp[0];
+               mid[1] += tmp[1];
+               if (max[0] < tmp[0]) max[0] = tmp[0];
+               if (max[1] < tmp[1]) max[1] = tmp[1];
+               if (min[0] > tmp[0]) min[0] = tmp[0];
+               if (min[1] > tmp[1]) min[1] = tmp[1];
+
+               tmp = core.coordinates[core.triangles[tris0[i]][1]];
+               mid[0] += tmp[0];
+               mid[1] += tmp[1];
+               if (max[0] < tmp[0]) max[0] = tmp[0];
+               if (max[1] < tmp[1]) max[1] = tmp[1];
+               if (min[0] > tmp[0]) min[0] = tmp[0];
+               if (min[1] > tmp[1]) min[1] = tmp[1];
+
+               tmp = core.coordinates[core.triangles[tris0[i]][2]];
+               mid[0] += tmp[0];
+               mid[1] += tmp[1];
+               if (max[0] < tmp[0]) max[0] = tmp[0];
+               if (max[1] < tmp[1]) max[1] = tmp[1];
+               if (min[0] > tmp[0]) min[0] = tmp[0];
+               if (min[1] > tmp[1]) min[1] = tmp[1];
             }
+         if (midcount == 0) throw new IllegalStateException("No points given to partition");
+         if (max[0] <= min[0] || max[1] <= min[1])
+            throw new IllegalStateException("Max and min have wrong relationship");
          if (midcount > 0) {
             mid[0] /= midcount;
             mid[1] /= midcount;
          }
+         if (t == null) t = Rectangle._from(min, max);
+         boundary = t;
          Rectangle[] parts = split(t, mid);
          // we start out with a list of everything (though this will diminish...)
          BuildDataPoints       bdpts  = new BuildDataPoints(      core, pts0,  parts);

@@ -84,6 +84,27 @@ public class Line {
       else           return (s.contains(p)? p : null);
    }
 
+
+   /** g.nearest(p) yields the point q that is the closest point on the line g to the point p; if p
+    *  is on the line g itself, then p is returned.
+    */
+   public final Point nearest(Point q) {
+      double
+         dx = B.coords[0] - A.coords[0],
+         dy = B.coords[1] - A.coords[1],
+         orthx, orthy;
+      if (Num.zeroish(dy)) {
+         orthx = 0.0;
+         orthy = 1.0;
+      } else {
+         orthx = 1.0;
+         orthy = -dx/dy;
+      }
+      Line lq = Line._from(q, Point.from(q.coords[0] + orthx, q.coords[1] + orthy));
+      Point isect = intersectionPoint(lq);
+      return (isect.equals(q)? q : isect);
+   }
+   
    /** Constructs a Line object from a coordinate matrix and indices of the two points;
     *  this is private, as the static from() function should be used to construct a line
     *  object. This constructor performs no error checking.

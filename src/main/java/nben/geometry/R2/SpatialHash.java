@@ -198,15 +198,27 @@ public class SpatialHash {
       if (newRoot == null) return -1;
       return ltris.iterator().next().intValue();
    }
-   /** hash.triangleContainerID(p) yields the first triangle found that contains the given point p.
+   /** hash.triangleContainer(p) yields the first triangle found that contains the given point p.
     *  This method is designed specifically for use with triangle meshes, in which each point p
     *  has 1-n triangle containers depending on whether it is in a triangle, on the boundary of
     *  two triangles, or the vertex of a triangle. This merely returns one of these for the given
     *  point, or null if the point does not lie in a triangle.
     */
    public final Triangle triangleContainer(Point p) {
-      int tri = triangleContainerID(p);
-      return (tri == -1? null : triangle(tri));
+      int id = triangleContainerID(p);
+      if (id == -1) return null;
+      else return triangle(id);
+   }
+
+   /** hash.nearest(p, b) yields the point in the hash that is nearest to the point p; if the option
+    *  b is true, then the mesh is considered filled and if false it is not. In other words,
+    *  assuming that p is contained in a triangle in the hash, if b is true then the return value
+    *  will be p, but if b is false, then it will be a point on the boundary of the triangle
+    *  containing p.
+    */
+   public final Point nearest(Point q, boolean filled) {
+      if (filled && triangleContainerID(q) != -1) return q;
+      else return root.nearest(q, this);
    }
 
    protected SpatialHash(double[][] coords, 
@@ -333,6 +345,54 @@ public class SpatialHash {
                               integersToInts(mysegs),
                               integersToInts(mytris),
                               newChildren);
+      }
+
+      public final Point nearest(Point q, SpatialHash core) {
+         int i, j;
+         Point p = null, tmp;
+         double dp2 = Double.MAX_VALUE, d2;
+         double[] x;
+         // start by checking our own items
+         if (pts != null) for (i = 0; i < pts.length; ++i) {
+               x = core.coordinates[core.points[pts[i]]];
+               d2 = Num.euclideanDistance2(q.coords, x);
+               if (d2 < dp2) {
+                  dp2 = d2;
+                  p = Point.from(x);
+               }
+            }
+         if (segs != null) for (i = 0; i < segs.length; ++i) {
+               tmp = core.segment(segs[i]).nearest(q);
+               d2 = Num.euclideanDistance2(q.coords, tmp.coords);
+               if (d2 < dp2) {
+                  dp2 = d2;
+                  p = tmp;
+               }
+            }
+         if (tris != null) for (i = 0; i < tris.length; ++i) {
+               tmp = core.triangle(tris[i]).nearest(q);
+               d2 = Num.euclideanDistance2(q.coords, tmp.coords);
+               if (d2 < dp2) {
+                  dp2 = d2;
+                  p = tmp;
+               }
+            }
+         // okay, we have a nearest point, pass it down if we need to...
+         if (children == null) return p;
+         Rectangle r;
+         for (i = 0; i < children.length; ++i) {
+            if (children[i] == null) continue;
+            r = children[i].boundary;
+            if (r.contains(q) || dp2 > Num.euclideanDistance2(q.coords, r.nearest(q).coords)) {
+               tmp = children[i].nearest(q, core);
+               d2 = Num.euclideanDistance2(q.coords, tmp.coords);
+               if (d2 < dp2) {
+                  dp2 = d2;
+                  p = tmp;
+               }
+            }
+         }
+         return p;
       }
 
       // partitioning data stored as we perform partitioning of the sphere surface

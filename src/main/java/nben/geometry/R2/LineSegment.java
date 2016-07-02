@@ -89,6 +89,20 @@ public class LineSegment {
       else                   return null;
    }
 
+   /** s.nearest(p) yields the point q that is the closest point on the line segment g to the point
+    *  p; if p is on the line segment g itself, then p is returned.
+    */
+   public final Point nearest(Point q) {
+      Point isect = line().nearest(q);
+      if (contains(isect)) return isect;
+      else {
+         double
+            da = Num.euclideanDistance2(A.coords, isect.coords),
+            db = Num.euclideanDistance2(B.coords, isect.coords);
+         return (da < db? A : B);
+      }
+   }
+
    /** Construct an LineSegment object; this should generally be done via the static function 
     *  LineSegment.from().
     */

@@ -243,6 +243,24 @@ public class Triangle {
     */
    public final boolean contains(Triangle t) {return relation_to(t) >= 0;}
 
+   /** t.nearest(p) yields the point q that is the closest point on the triangle t to the point p;
+    *  if p is on the triangle g itself, then p is returned.
+    */
+   public final Point nearest(Point q) {
+      Point
+         nAB = segAB().nearest(q),
+         nBC = segBC().nearest(q),
+         nCA = segCA().nearest(q);
+      double
+         dAB = Num.euclideanDistance2(q.coords, nAB.coords),
+         dBC = Num.euclideanDistance2(q.coords, nBC.coords),
+         dCA = Num.euclideanDistance2(q.coords, nCA.coords);
+      if (Num.zeroish(dAB) || Num.zeroish(dBC) || Num.zeroish(dCA)) return q;
+      else if (dAB < dBC && dAB < dCA)                              return nAB;
+      else if (dBC < dCA)                                           return nBC;
+      else                                                          return nCA;
+   }
+   
    /** tri.address(q, x) yields true if the given point q is inside the given triangle tri and false
     *  if it is outside; it writes the 'address' coordinates into the length-2 array x if the point
     *  is inside the triangle; otherwise it does nothing.

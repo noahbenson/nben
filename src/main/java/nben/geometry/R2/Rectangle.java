@@ -207,6 +207,49 @@ public class Rectangle {
       return contains(t.lowerLeft) && contains(t.upperRight);
    }
 
+   /** r.center() yields the central point of the rectangle r. */
+   public final Point center() {
+      return Point.from(0.5*(lowerLeft.coords[0] + upperRight.coords[0]),
+                        0.5*(lowerLeft.coords[1] + upperRight.coords[1]));
+   }
+
+   /** r.nearest(p) yields the point q that is the closest point on the rectangle r to the point p;
+    *  if p is on the rectangle r itself, then p is returned.
+    */
+   public final Point nearest(Point q) {
+      double[]
+         ll = lowerLeft.coords,
+         ur = upperRight.coords,
+         qq = q.coords;
+      double x, y;
+      if (contains(q)) {
+         double
+            up = ur[1] - qq[1],
+            down = qq[1] - ll[1],
+            left = ur[0] - qq[0],
+            right = qq[0] - ll[0];
+         if (up < down && up < left && up < right) {
+            x = qq[0]; y = ur[1];
+         } else if (down < left && down < right) {
+            x = qq[0]; y = ll[1];
+         } else if (left < right) {
+            x = ur[0]; y = qq[1];
+         } else {
+            x = ll[0]; y = qq[1];
+         }
+      } else {
+         x = (ll[0] > q.coords[0]
+              ? ll[0]
+              : (ur[0] < q.coords[0]? ur[0] : q.coords[0]));
+         y = (ll[1] > q.coords[1]
+              ? ll[1]
+              : (ur[1] < q.coords[1]? ur[1] : q.coords[1]));
+      }
+      Point c = Point.from(x, y);
+      if (q.equals(c)) return q;
+      else return c;
+   }
+
    /** Constructs a Rectangle instance from the lower left and upper right points of the rectangle.
     */
    protected Rectangle(Point ll, Point ur) {

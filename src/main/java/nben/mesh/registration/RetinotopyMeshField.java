@@ -22,6 +22,8 @@
 
 package nben.mesh.registration;
 
+import nben.geometry.R2.MeshTopology;
+
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
@@ -34,24 +36,27 @@ import java.util.concurrent.CancellationException;
  *  @author Noah C. Benson
  */
 public abstract class RetinotopyMeshField implements IPotentialField {
-   /** the coordinates in the field */
-   public final double[][] coordinates;
-   /** the triangles that connect the coordinates */
-   public final int[][] triangles;
-   /** the polar angle values */
+   /** the mesh topology that tracks the points and triangles of the field */
+   public final MeshTopology topology;
+   /** the specific registration of the topology for the field mesh */
+   public final MeshTopology.Registration registration;
+   /** the polar angle values (one per vertex/coordinate) */
    public final double[] polarAngle;
-   /** the eccentricity values */
+   /** the eccentricity values (one per vertex/coordinates) */
    public final double[] eccentricity;
 
    /** RetinotopyMeshField(coords, triangles, y) constructs a new potential field with the given
     *  potential values, angles and eccens, estimated at coordinates positions coords, which are
-    *  connected via the given matrix of triangles.
+    *  connected via the given matrix of triangles. The angles and eccentricities should be in
+    *  the same units.
     */
    public RetinotopyMeshField(double[][] X, int[][] tris, double[] angles, double[] eccens) {
-      coordinates = X;
-      triangles = tris;
-      // #here
-      values = y;
+      topology = MeshTopology.from(tris);
+      registration = topology.register(X);
+      if (registration.coordinates.length != angles.length || angles.length != eccens.length)
+         throw new IllegalArgumentException("angles, eccens, and coord count must be the same");
+      polarAngles = angles.clone();
+      eccentricity = eccens.clone();
    }
    
    /** The calculate method yields the value of the potential at the given coordinate matrix X over

@@ -36,7 +36,7 @@ import java.util.concurrent.CancellationException;
  *
  *  @author Noah C. Benson
  */
-public abstract class RetinotopyMeshField extends ASimplexPotential {
+public class RetinotopyMeshField extends ASimplexPotential {
    /** the mesh topology that tracks the points and triangles of the field */
    public final MeshTopology topology;
    /** the specific registration of the topology for the field mesh */
@@ -51,6 +51,12 @@ public abstract class RetinotopyMeshField extends ASimplexPotential {
       int[][] S = new int[1][];
       S[0] = vertexIDs;
       return S;
+   }
+   // private function for filling up an array of identical differentiated functions...
+   private final static IDifferentiatedFunction[] fillDiffFns(IDifferentiatedFunction f, int n) {
+      IDifferentiatedFunction[] fs = new IDifferentiatedFunction[n];
+      for (int i = 0; i < n; ++i) fs[i] = f;
+      return fs;
    }
 
    /** retinoPotential.calculateSimplex(id, X, G) calculates the potential difference based on the

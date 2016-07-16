@@ -52,7 +52,7 @@ class AnchorPotential extends ASimplexPotential {
       return S;
    }
 
-   /** anchorPotential.calculateAngle(id, X, G) calculates the anchor distance based on the
+   /** anchorPotential.calculatesimplex(id, X, G) calculates the anchor distance based on the
     *  given id by looking up the X coordinaets in the given coordinate matrix (size: dims x
     *  vertices) X. If the final argument G is non-null, it places the gradient value in the
     *  appropriate entries of the (1 x dims)-sized matrix G.

@@ -23,6 +23,7 @@
 package nben.mesh.registration;
 
 import nben.geometry.R2.MeshTopology;
+import nben.util.Num;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -35,60 +36,134 @@ import java.util.concurrent.CancellationException;
  *
  *  @author Noah C. Benson
  */
-public abstract class RetinotopyMeshField implements IPotentialField {
+public class RetinotopyMeshField extends ASimplexPotential {
    /** the mesh topology that tracks the points and triangles of the field */
    public final MeshTopology topology;
    /** the specific registration of the topology for the field mesh */
    public final MeshTopology.Registration registration;
-   /** the polar angle values (one per vertex/coordinate) */
-   public final double[] polarAngle;
-   /** the eccentricity values (one per vertex/coordinates) */
-   public final double[] eccentricity;
+   /** the polar angle or eccentricity values (one per vertex/coordinate) */
+   public final double[] angles;
+   /** the polar angle values of the points being tracked */
+   public final double[] vertexAngles;
 
-   /** RetinotopyMeshField(coords, triangles, y) constructs a new potential field with the given
-    *  potential values, angles and eccens, estimated at coordinates positions coords, which are
-    *  connected via the given matrix of triangles. The angles and eccentricities should be in
-    *  the same units.
-    */
-   public RetinotopyMeshField(double[][] X, int[][] tris, double[] angles, double[] eccens) {
-      topology = MeshTopology.from(tris);
-      registration = topology.register(X);
-      if (registration.coordinates.length != angles.length || angles.length != eccens.length)
-         throw new IllegalArgumentException("angles, eccens, and coord count must be the same");
-      polarAngles = angles.clone();
-      eccentricity = eccens.clone();
+   // a simple function to turn a list of vertexID's into simplices for ASimplexPotential
+   private static final int[][] vertexIDsToSimplices(int[] vertexIDs) {
+      int[][] S = new int[1][];
+      S[0] = vertexIDs;
+      return S;
    }
-   
-   /** The calculate method yields the value of the potential at the given coordinate matrix X over
-    *  the given subset of vertices in subset and places the gradient for these vertices in the
-    *  given gradient matrix. On error, an exception is thrown; this only occurs when invoking the
-    *  Par.run() function, so it should be referenced for details of exceptions.
-    *
-    *  @return the potential energy of the potential field at the coordinate configuration X
-    *  @param X the (dims x vertices)-sized matrix of vertex coordinates at which to evaluate the
-    *           potential
-    *  @param G the (dims x vertices)-sized output matrix to which the gradient matrix should be
-    *           added; note that this matrix may already contain data from another potential field
-    *           that is part of a potential field sum --- thus one should always add to the gradient
-    *           and never overwrite it
-    *  @see Par.run
+   // private function for filling up an array of identical differentiated functions...
+   private final static IDifferentiatedFunction[] fillDiffFns(IDifferentiatedFunction f, int n) {
+      IDifferentiatedFunction[] fs = new IDifferentiatedFunction[n];
+      for (int i = 0; i < n; ++i) fs[i] = f;
+      return fs;
+   }
+
+   /** retinoPotential.calculateSimplex(id, X, G) calculates the potential difference based on the
+    *  given id by looking up the X coordinaets in the given coordinate matrix (size: dims x
+    *  vertices) X. If the final argument G is non-null, it places the gradient value in the
+    *  appropriate entries of the (1 x dims)-sized matrix G.
     */
-   abstract public double calculate(double[][] X, double[][] G)
-      throws InterruptedException,
-             ExecutionException, 
-             CancellationException,
-             NullPointerException, 
-             RejectedExecutionException;
-   /** Potential Fields must be capable of producing duplicates of themselves that are optimized to
-    *  operate over a specific subset of the total vertex set. P.sub(ss) produces one such potential
-    *  field for the subset ss. If null is given, then this should be interpreted as all-vertices.
+   public final double calculateSimplex(int id, double[][] X, double[][] G) {
+      // if we haven't initialized anything yet, we return 0;
+      // this only happens during the calls to this function that are run during the constructor of
+      // ASimplexPotential. We want to replace these with the reference value in the constructor
+      // anyway:
+      if (topology == null) return 0.0;
+      int i, u = simplices[0][id];
+      // first, extract the relevant point
+      double[] pt = new double[X.length];
+      for (i = 0; i < pt.length; ++i) pt[i] = X[i][u];
+      // next, we want to find the interpolation coordinates for the nearest point
+      MeshTopology.Interpolator interp = topology.interpolate(registration, pt, 1, true); //#check
+      // the interp object can be used for angle; do this first:
+      double predictAngle = interp.interpolate(angles);
+      // do the gradient if we have been passed a valid workspace
+      if (G != null) {
+         // the normal vector to the triangle is the cross-product...
+         if (interp.indices.length != 3) {
+            // not in a triangle -- gradient must be 0
+            G[0][0] = 0;
+            G[0][1] = 0;
+         } else {
+            // the normal vector projected onto the 2D surface should give us the gradient
+            double[] a = new double[3],
+                     b = new double[3],
+                     cx;
+            int j, k;
+            i = interp.indices[0];
+            j = interp.indices[1];
+            k = interp.indices[2];
+            a[0] = topology.coordinates[j][0] - topology.coordinates[i][0];
+            a[1] = topology.coordinates[j][1] - topology.coordinates[i][1];
+            b[0] = topology.coordinates[k][0] - topology.coordinates[i][0];
+            b[1] = topology.coordinates[k][1] - topology.coordinates[i][1];
+            cx = Num.cross(a, b);
+            // the math for this ends up working out however the cross product is scaled:
+            G[0][0] = -cx[0] / cx[2];
+            G[0][1] = -cx[1] / cx[2];
+         }
+      }
+      return predictAngle;
+   }
+
+   /** RetinotopyMeshField(meshCoordinates, meshTriangles, meshAngles, meshEccens,
+    *                      vertexIndices, vertexAngles, vertexEccens, vertexWeights)
+    *  constructs a new potential field consisting of a triangle mesh with angle and eccentricity
+    *  values sampled at the given meshCoordinates; the vertexIndices detemine the vertices tracked
+    *  and given gradient values by the potential, based on their angles and eccentricities.
     *
-    *  @param ss an array of vertex indices over which the potential and gradient should be
-    *            calculated; note that this does not change the size of the gradient or
-    *            coordinate matrices, which are always expected to be big enough for the entire
-    *            calculation, but it does instruct the function to ignore certain vertices. If null,
-    *            this should be interpreted as all vertices.
-    *  @return the new potential field
+    *  @param f the differentiated functions that determine the shape of the potential
+    *  @param meshCoordinates the N x 3 matrix of coordinates at which the function is sampled
+    *  @param meshTriangles the N x 3 matrix of vertex indices (into meshCoordinates) that specify
+    *                       the triangles in the mesh
+    *  @param meshAngles the N-length vector of visual angle values at each vertex in the mesh
+    *  @param vertexIndices the M-length vector of indices of the vertices at which the potential
+    *                       will be calculated
+    *  @param vertexAngles the M-length vector of visual angle values of each of the vertices
+    *  @param X0 the initial 2 x N matrix of vertex coordinates
     */
-   abstract public IPotentialField subfield(int[] ss);
+   public RetinotopyMeshField(IDifferentiatedFunction[] f,
+                              double[][] meshCoordinates,
+                              int[][] meshTriangles,
+                              double[] meshAngles,
+                              int[] vertexIndices,
+                              double[] vertexAngles,
+                              double[][] X0) {
+      super(f, vertexIDsToSimplices(vertexIndices), X0);
+      topology = MeshTopology.from(meshTriangles);
+      registration = topology.register(meshCoordinates);
+      if (registration.coordinates.length != meshAngles.length)
+         throw new IllegalArgumentException("mesh angles, eccens, and coord count must be equal");
+      angles = meshAngles.clone();
+      if (vertexAngles.length != vertexIndices.length)
+         throw new IllegalArgumentException(
+           "vertex indices, angles, and eccens must be the same length");
+      vertexAngles = vertexAngles.clone();
+      // the simplex reference values need to be edited
+      for (int i = 0; i < vertexIndices.length; ++i)
+         M0[i] = angles[i];
+   }
+   public RetinotopyMeshField(IDifferentiatedFunction f,
+                              double[][] meshCoordinates,
+                              int[][] meshTriangles,
+                              double[] meshAngles,
+                              int[] vertexIndices,
+                              double[] vertexAngles,
+                              double[][] X0) {
+      this(fillDiffFns(f, vertexIndices.length), meshCoordinates, meshTriangles, meshAngles,
+           vertexIndices, vertexAngles, X0);
+   }
+   // for subfield'ing
+   protected RetinotopyMeshField(RetinotopyMeshField field, int[] ss) {
+      super(field, ss);
+      this.topology = field.topology;
+      this.registration = field.registration;
+      this.vertexAngles = field.vertexAngles;
+      this.angles = field.angles;
+   }
+
+   /** Yields a duplicate RetinotopyMeshField object but with the given subset of vertices.
+    */
+   public RetinotopyMeshField subfield(int[] ss) {return new RetinotopyMeshField(this, ss);}
 }

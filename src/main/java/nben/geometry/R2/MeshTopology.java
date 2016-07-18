@@ -183,17 +183,9 @@ public class MeshTopology {
     *  with the given topology.
     */
    public final Registration register(double[][] coords) {
-      // make sure every triangle is okay
       if (coords.length < vertexCount)
          throw new IllegalArgumentException("coordinate matrix must be n x 2 where n >= "
                                             + vertexCount);
-      for (int i = 0; i < triangles.length; ++i) {
-         if (Triangle.from(Point.from(coords[triangles[i][0]]),
-                           Point.from(coords[triangles[i][1]]),
-                           Point.from(coords[triangles[i][2]])).cw())
-            throw new IllegalArgumentException("Registration contains inverted triangles");
-      }
-      // okay, it's fine!
       return new Registration(coords);
    }
    /** topology._register(coords) yields a Registration object for the given coordinates combined 
@@ -275,91 +267,326 @@ public class MeshTopology {
                weights[i] = wgts[i] / tmp;
          }
       }
+
       /** Interpolates from the vals and yields the result; ignore any masked vals. If all vals
-       *  relevant to a point are masked, set it to nullval.
+       *  relevant to a point are masked, set it to nullval. A mask value m is considered included
+       *  if (m &gt; 0.5).
        */
       public final double interpolate(double[] vals, double[] mask, double nullval) {
          double res = 0;
          double tot = 0;
-         int j;
-         for (int i = 0; i < indices.length; ++i) {
-            j = indices[i];
-            if (mask[j] > 0.5) {
-               res += weights[i] * vals[j];
-               tot += weights[i];
+         int i, j;
+         if (mask == null) {
+            for (i = 0; i < indices.length; ++i) {
+               j = indices[i];
+               for (i = 0; i < indices.length; ++i) {
+                  res += weights[i] * vals[indices[i]];
+                  tot += weights[i];
+               }
+            }
+         } else {
+            for (i = 0; i < indices.length; ++i) {
+               j = indices[i];
+               if (mask[j] > 0.5) {
+                  res += weights[i] * vals[j];
+                  tot += weights[i];
+               }
             }
          }
-         if (tot == 0) return nullval;
-         else          return res / tot;
+         if (Num.zeroish(tot)) return nullval;
+         else                  return res / tot;
       }
       /** Interpolates from the vals and yields the result; ignore any masked vals. If all vals
-       *  relevant to a point are masked, set it to nullval.
+       *  relevant to a point are masked, set it to nullval. A mask value is considered included
+       *  if it is not equal to 0 and excluded if it is equal to 0.
        */
       public final double interpolate(double[] vals, int[] mask, double nullval) {
-         if (mask[closest] == 0) return nullval;
          double res = 0;
          double tot = 0;
-         int j;
-         for (int i = 0; i < indices.length; ++i) {
-            j = indices[i];
-            if (mask[j] != 0) {
-               res += weights[i] * vals[j];
-               tot += weights[i];
+         int i, j;
+         if (mask == null) {
+            for (i = 0; i < indices.length; ++i) {
+               j = indices[i];
+               for (i = 0; i < indices.length; ++i) {
+                  res += weights[i] * vals[indices[i]];
+                  tot += weights[i];
+               }
+            }
+         } else {
+            for (i = 0; i < indices.length; ++i) {
+               j = indices[i];
+               if (mask[j] != 0) {
+                  res += weights[i] * vals[j];
+                  tot += weights[i];
+               }
             }
          }
-         return res / tot;
+         if (Num.zeroish(tot)) return nullval;
+         else                  return res / tot;
       }
       /** Interpolates from the vals and yields the result; ignore an masked vals. If all vals
-       *  relevant to a point are masked, set it to nullval.
+       *  relevant to a point are masked, set it to nullval. A max value is considered included
+       *  if it is true and excluded if it is false.
        */
       public final double interpolate(double[] vals, boolean[] mask, double nullval) {
-         if (!mask[closest]) return nullval;
          double res = 0;
          double tot = 0;
-         int j;
-         for (int i = 0; i < indices.length; ++i) {
-            j = indices[i];
-            if (mask[j]) {
-               res += weights[i] * vals[j];
-               tot += weights[i];
+         int i, j;
+         if (mask == null) {
+            for (i = 0; i < indices.length; ++i) {
+               j = indices[i];
+               for (i = 0; i < indices.length; ++i) {
+                  res += weights[i] * vals[indices[i]];
+                  tot += weights[i];
+               }
+            }
+         } else {
+            for (i = 0; i < indices.length; ++i) {
+               j = indices[i];
+               if (mask[j]) {
+                  res += weights[i] * vals[j];
+                  tot += weights[i];
+               }
             }
          }
-         return res / tot;
+         if (Num.zeroish(tot)) return nullval;
+         else                  return res / tot;
       }
-      /** Interpolates from the vals and yields the result */
-      public final double interpolate(double[] vals) {
+
+     /** Interpolates from the vals and yields the result; ignore any masked vals. If all vals
+       *  relevant to a point are masked, set it to nullval. A mask value m is considered included
+       *  if (m &gt; 0.5).
+       */
+      public final int interpolate(int[] vals, double[] mask, int nullval) {
          double res = 0;
-         for (int i = 0; i < indices.length; ++i)
-            res += weights[i] * vals[indices[i]];
-         return res;
+         double tot = 0;
+         int i, j;
+         if (mask == null) {
+            for (i = 0; i < indices.length; ++i) {
+               j = indices[i];
+               for (i = 0; i < indices.length; ++i) {
+                  res += weights[i] * (double)vals[indices[i]];
+                  tot += weights[i];
+               }
+            }
+         } else {
+            for (i = 0; i < indices.length; ++i) {
+               j = indices[i];
+               if (mask[j] > 0.5) {
+                  res += weights[i] * (double)vals[j];
+                  tot += weights[i];
+               }
+            }
+         }
+         if (Num.zeroish(tot)) return nullval;
+         else                  return (int)Math.round(res / tot);
       }
-      /** Interpolate from the given vals and yield the result; because the values are integers,
-       *  the interpolation is forced to nearest-neighbor-like interpolation (uses only the vertex
-       *  with the highest weight).
+      /** Interpolates from the vals and yields the result; ignore any masked vals. If all vals
+       *  relevant to a point are masked, set it to nullval. A mask value is considered included
+       *  if it is not equal to 0 and excluded if it is equal to 0.
        */
-      public final int interpolate(int[] vals) {
-         return vals[closest];
+      public final int interpolate(int[] vals, int[] mask, int nullval) {
+         double res = 0;
+         double tot = 0;
+         int i, j;
+         if (mask == null) {
+            for (i = 0; i < indices.length; ++i) {
+               j = indices[i];
+               for (i = 0; i < indices.length; ++i) {
+                  res += weights[i] * (double)vals[indices[i]];
+                  tot += weights[i];
+               }
+            }
+         } else {
+            for (i = 0; i < indices.length; ++i) {
+               j = indices[i];
+               if (mask[j] != 0) {
+                  res += weights[i] * (double)vals[j];
+                  tot += weights[i];
+               }
+            }
+         }
+         if (Num.zeroish(tot)) return nullval;
+         else                  return (int)Math.round(res / tot);
       }
       /** Interpolates from the vals and yields the result; ignore an masked vals. If all vals
-       *  relevant to a point are masked, set it to nullval.
+       *  relevant to a point are masked, set it to nullval. A max value is considered included
+       *  if it is true and excluded if it is false.
        */
-      public final double interpolate(int[] vals, double[] mask, double nullval) {
-         if (mask[closest] > 0.5) return vals[closest];
-         else                     return nullval;
+      public final int interpolate(int[] vals, boolean[] mask, int nullval) {
+         double res = 0;
+         double tot = 0;
+         int i, j;
+         if (mask == null) {
+            for (i = 0; i < indices.length; ++i) {
+               j = indices[i];
+               for (i = 0; i < indices.length; ++i) {
+                  res += weights[i] * (double)vals[indices[i]];
+                  tot += weights[i];
+               }
+            }
+         } else {
+            for (i = 0; i < indices.length; ++i) {
+               j = indices[i];
+               if (mask[j]) {
+                  res += weights[i] * (double)vals[j];
+                  tot += weights[i];
+               }
+            }
+         }
+         if (Num.zeroish(tot)) return nullval;
+         else                  return (int)Math.round(res / tot);
       }
-      /** Interpolates from the vals and yields the result; ignore an masked vals. If all vals
-       *  relevant to a point are masked, set it to nullval.
+      
+      /** Interpolates from the vals and yields the result; equivalent to 
+       *  interpolate(vals, mask, 0).
        */
-      public final double interpolate(int[] vals, int[] mask, double nullval) {
-         if (mask[closest] != 0) return vals[closest];
-         else                    return nullval;
+      public final double interpolate(double[] vals, double[] mask) {
+         return interpolate(vals, mask, 0.0);
       }
-      /** Interpolates from the vals and yields the result; ignore an masked vals. If all vals
-       *  relevant to a point are masked, set it to nullval.
+      /** Interpolates from the vals and yields the result; equivalent to 
+       *  interpolate(vals, mask, 0).
        */
-      public final double interpolate(int[] vals, boolean[] mask, double nullval) {
-         if (mask[closest]) return vals[closest];
-         else               return nullval;
+      public final double interpolate(double[] vals, int[] mask) {
+         return interpolate(vals, mask, 0.0);
+      }
+      /** Interpolates from the vals and yields the result; equivalent to 
+       *  interpolate(vals, mask, 0).
+       */
+      public final double interpolate(double[] vals, boolean[] mask) {
+         return interpolate(vals, mask, 0.0);
+      }
+      /** Interpolates from the vals and yields the result; equivalent to 
+       *  interpolate(vals, null, nullval).
+       */
+      public final double interpolate(double[] vals, double nullval) {
+         return interpolate(vals, (double[])null, nullval);
+      }
+      /** Interpolates from the vals and yields the result; equivalent to 
+       *  interpolate(vals, null, 0).
+       */
+      public final double interpolate(double[] vals) {
+         return interpolate(vals, (double[])null, 0.0);
+      }
+      /** Interpolates from the vals and yields the result; equivalent to 
+       *  interpolate(vals, mask, 0).
+       */
+      public final double interpolate(int[] vals, double[] mask) {
+         return interpolate(vals, mask, 0);
+      }
+      /** Interpolates from the vals and yields the result; equivalent to 
+       *  interpolate(vals, mask, 0).
+       */
+      public final double interpolate(int[] vals, int[] mask) {
+         return interpolate(vals, mask, 0);
+      }
+      /** Interpolates from the vals and yields the result; equivalent to 
+       *  interpolate(vals, mask, 0).
+       */
+      public final double interpolate(int[] vals, boolean[] mask) {
+         return interpolate(vals, mask, 0);
+      }
+      /** Interpolates from the vals and yields the result; equivalent to 
+       *  interpolate(vals, null, nullval).
+       */
+      public final double interpolate(int[] vals, int nullval) {
+         return interpolate(vals, (double[])null, nullval);
+      }
+      /** Interpolates from the vals and yields the result; equivalent to 
+       *  interpolate(vals, null, 0).
+       */
+      public final double interpolate(int[] vals) {
+         return interpolate(vals, (double[])null, 0);
+      }
+
+      /** Uses nearest-neighbor interpolation */
+      public final double neighbor(double[] vals, double[] mask, double nullval) {
+         return (mask == null || mask[closest] > 0.5? vals[closest] : nullval);
+      }
+      /** Uses nearest-neighbor interpolation */
+      public final double neighbor(double[] vals, int[] mask, double nullval) {
+         return (mask == null || mask[closest] != 0? vals[closest] : nullval);
+      }
+      /** Uses nearest-neighbor interpolation */
+      public final double neighbor(double[] vals, boolean[] mask, double nullval) {
+         return (mask == null || mask[closest]? vals[closest] : nullval);
+      }
+
+      /** Uses nearest-neighbor interpolation */
+      public final int neighbor(int[] vals, double[] mask, int nullval) {
+         return (mask == null || mask[closest] > 0.5? vals[closest] : nullval);
+      }
+      /** Uses nearest-neighbor interpolation */
+      public final int neighbor(int[] vals, int[] mask, int nullval) {
+         return (mask == null || mask[closest] != 0? vals[closest] : nullval);
+      }
+      /** Uses nearest-neighbor interpolation */
+      public final int neighbor(int[] vals, boolean[] mask, int nullval) {
+         return (mask == null || mask[closest]? vals[closest] : nullval);
+      }
+
+      /** Uses nearest-neighbor interpolation */
+      public final Object neighbor(Object[] vals, double[] mask, Object nullval) {
+         return (mask == null || mask[closest] > 0.5? vals[closest] : nullval);
+      }
+      /** Uses nearest-neighbor interpolation */
+      public final Object neighbor(Object[] vals, int[] mask, Object nullval) {
+         return (mask == null || mask[closest] != 0? vals[closest] : nullval);
+      }
+      /** Uses nearest-neighbor interpolation */
+      public final Object neighbor(Object[] vals, boolean[] mask, Object nullval) {
+         return (mask == null || mask[closest]? vals[closest] : nullval);
+      }
+
+      /** Equivalent to neighbor(vals, mask, 0)  */
+      public final double neighbor(double[] vals, double[] mask) {
+         return neighbor(vals, mask, 0.0);
+      }
+      /** Equivalent to neighbor(vals, mask, 0)  */
+      public final double neighbor(double[] vals, int[] mask) {
+         return neighbor(vals, mask, 0.0);
+      }
+      /** Equivalent to neighbor(vals, mask, 0)  */
+      public final double neighbor(double[] vals, boolean[] mask) {
+         return neighbor(vals, mask, 0.0);
+      }
+      /** Equivalent to neighbor(vals, null, nullval)  */
+      public final double neighbor(double[] vals, double nullval) {
+         return neighbor(vals, (double[])null, nullval);
+      }
+
+      /** Equivalent to neighbor(vals, mask, 0)  */
+      public final int neighbor(int[] vals, double[] mask) {
+         return neighbor(vals, mask, 0);
+      }
+      /** Equivalent to neighbor(vals, mask, 0)  */
+      public final int neighbor(int[] vals, int[] mask) {
+         return neighbor(vals, mask, 0);
+      }
+      /** Equivalent to neighbor(vals, mask, 0)  */
+      public final int neighbor(int[] vals, boolean[] mask) {
+         return neighbor(vals, mask, 0);
+      }
+      /** Equivalent to neighbor(vals, null, nullval)  */
+      public final int neighbor(int[] vals, int nullval) {
+         return neighbor(vals, (double[])null, nullval);
+      }
+
+      /** Equivalent to neighbor(vals, mask, null)  */
+      public final Object neighbor(Object[] vals, double[] mask) {
+         return neighbor(vals, mask, null);
+      }
+      /** Equivalent to neighbor(vals, mask, null)  */
+      public final Object neighbor(Object[] vals, int[] mask) {
+         return neighbor(vals, mask, null);
+      }
+      /** Equivalent to neighbor(vals, mask, null)  */
+      public final Object neighbor(Object[] vals, boolean[] mask) {
+         return neighbor(vals, mask, null);
+      }
+      /** Equivalent to neighbor(vals, null, nullval)  */
+      public final Object neighbor(Object[] vals, Object nullval) {
+         return neighbor(vals, (double[])null, nullval);
       }
    }
    /** topology.interpolation(from, to, order, near) yields an array of Interpolator objects, one
@@ -373,7 +600,7 @@ public class MeshTopology {
     */
    public final Interpolator[] interpolation(Registration from, double[][] to,
                                              int order, boolean near) {
-      int i, j;
+      int i, j; 
       Interpolator[] interp;
       Point p;
       Triangle tri;
@@ -389,9 +616,9 @@ public class MeshTopology {
             p = Point.from(to[i]);
             j = from.hash.triangleContainerID(p);
             vtcs = from.hash.triangles[j];
-            d1 = Num.euclideanDistance2D(from.hash.coordinates[vtcs[0]], p.coords);
-            d2 = Num.euclideanDistance2D(from.hash.coordinates[vtcs[1]], p.coords);
-            d3 = Num.euclideanDistance2D(from.hash.coordinates[vtcs[2]], p.coords);
+            d1 = Num.euclideanDistance2(from.hash.coordinates[vtcs[0]], p.coords);
+            d2 = Num.euclideanDistance2(from.hash.coordinates[vtcs[1]], p.coords);
+            d3 = Num.euclideanDistance2(from.hash.coordinates[vtcs[2]], p.coords);
             vtcs = new int[] {(d1 <= d2
                                ? (d1 <= d3? vtcs[0] : vtcs[2])
                                : (d2 <= d3? vtcs[1] : vtcs[2]))};
@@ -420,7 +647,7 @@ public class MeshTopology {
                                  from.hash.coordinates[vtcs[2]]);
             tot = tri.area();
             if (Num.zeroish(tot)) {
-               interp[i] = new Interpolator(vtcs, new double[3] {1.0/3.0, 1.0/3.0, 1.0/3.0});
+               interp[i] = new Interpolator(vtcs, new double[] {1.0/3.0, 1.0/3.0, 1.0/3.0});
             } else {
                weights = new double[3];
                weights[0] = Triangle._from(p, tri.B, tri.C).area()/tot;
@@ -449,9 +676,47 @@ public class MeshTopology {
     *  topology.interpolation(from, to. order, false).
     */
    public final Interpolator[] interpolation(Registration from, double[][] to, int order) {
-      return interpoation(from, to, order, false);
+      return interpolation(from, to, order, false);
    }
-   /** topology.interpolate(from, to, order, data, near, mask, nullval) yields an array of values
+   /** topology.interpolation(from, to, near) is equivalent to 
+    *  topology.interpolation(from, to. 1, near).
+    */
+   public final Interpolator[] interpolation(Registration from, double[][] to, boolean near) {
+      return interpolation(from, to, 1, near);
+   }
+   /** topology.interpolation(from, to) is equivalent to 
+    *  topology.interpolation(from, to. 1, false).
+    */
+   public final Interpolator[] interpolation(Registration from, double[][] to) {
+      return interpolation(from, to, 1, false);
+   }
+
+   public final Interpolator interpolation(Registration from, double[] to,
+                                           int order, boolean near) {
+      return interpolation(from, new double[][] {to}, order, near)[0];
+   }
+   /** topology.interpolation(from, to, order) is equivalent to 
+    *  topology.interpolation(from, to. order, false).
+    */
+   public final Interpolator interpolation(Registration from, double[] to, int order) {
+      return interpolation(from, to, order, false);
+   }
+   /** topology.interpolation(from, to, near) is equivalent to 
+    *  topology.interpolation(from, to. 1, near).
+    */
+   public final Interpolator interpolation(Registration from, double[] to, boolean near) {
+      return interpolation(from, to, 1, near);
+   }
+   /** topology.interpolation(from, to) is equivalent to 
+    *  topology.interpolation(from, to. 1, false).
+    */
+   public final Interpolator interpolation(Registration from, double[] to) {
+      return interpolation(from, to, 1, false);
+   }
+
+
+
+   /** topology.interpolate(from, to, data, order, near, mask, nullval) yields an array of values
     *  that have been interpolated from the underlying from mesh to the points in the matrix to. The
     *  given data array is assumed to be the values at the from vertices, and mask is an array of 
     *  either 0 or 1 values indicating whether the equivalent vertex in from is included (1) or not
@@ -460,83 +725,188 @@ public class MeshTopology {
     *  correct interpolated value. The near parameter is passed directly to the 
     *  topology.interpolation function.
     */
-   public final double[] interpolate(Registration from, double[][] to, int order, boolean near,
-                                     double[] data, int[] mask, double nullval) {
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     int order, boolean near, double[] mask, double nullval) {
       Interpolator[] interp = interpolation(from, to, order, near);
       int tmp = 1;
       double[] res = new double[interp.length];
       for (int i = 0; i < interp.length; ++i)
-         res[i] = (interp[i] == null? null : interp[i].interpolate(data, mask, nullval));
+         res[i] = (interp[i] == null? nullval : interp[i].interpolate(data, mask, nullval));
       return res;
    }
-   /** topology.interpolate(from, to, order, data, mask, nullval) yields an array of values that 
-    *  have been interpolated from the underlying from mesh to the points in the matrix to. The 
-    *  given data array is assumed to be the values at the from vertices, and mask is an array of 
+   
+   /** Uses nullval = 0 */
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     int order, boolean near, double[] mask) {
+      return interpolate(from, to, data, order, near, mask, 0.0);
+   }
+   /** Uses mask = null */
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     int order, boolean near, double nullval) {
+      return interpolate(from, to, data, order, near, (double[])null, nullval);
+   }
+   /** Uses near = false */
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     int order, double[] mask, double nullval) {
+      return interpolate(from, to, data, order, false, mask, nullval);
+   }
+   /** Uses order = 1 */
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     boolean near, double[] mask, double nullval) {
+      return interpolate(from, to, data, 1, near, mask, nullval);
+   }
+
+   /** Uses nullval = 0 and order = 1*/
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     boolean near, double[] mask) {
+      return interpolate(from, to, data, 1, near, mask, 0.0);
+   }
+   /** Uses mask = null and order = 1 */
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     boolean near, double nullval) {
+      return interpolate(from, to, data, 1, near, (double[])null, nullval);
+   }
+   /** Uses near = false and order = 1 */
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     double[] mask, double nullval) {
+      return interpolate(from, to, data, 1, false, mask, nullval);
+   }
+   /** Uses nullval = 0 and near = false */
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     int order, double[] mask) {
+      return interpolate(from, to, data, order, false, mask, 0.0);
+   }
+   /** Uses mask = null and near = false */
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     int order, double nullval) {
+      return interpolate(from, to, data, order, false, (double[])null, nullval);
+   }
+   /** Uses mask = null and nullval = 0.0 */
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     int order, boolean near) {
+      return interpolate(from, to, data, order, near, (double[])null, 0.0);
+   }
+
+
+   /** Uses nullval = 0 and order = 1 and near = false */
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     double[] mask) {
+      return interpolate(from, to, data, 1, false, mask, 0.0);
+   }
+   /** Uses mask = null and order = 1 and near = false */
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     double nullval) {
+      return interpolate(from, to, data, 1, false, (double[])null, nullval);
+   }
+   /** Uses nullval = 0 and near = false and mask = null*/
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     int order) {
+      return interpolate(from, to, data, order, false, (double[])null, 0.0);
+   }
+   /** Uses nullval = 0 and order = 1 and mask = null*/
+   public final double[] interpolate(Registration from, double[][] to, double[] data,
+                                     boolean near) {
+      return interpolate(from, to, data, 1, near, (double[])null, 0.0);
+   }
+
+   /** uses nullval = 0. order = 1, mask = null, and near = false */
+   public final double[] interpolate(Registration from, double[][] to, double[] data) {
+      return interpolate(from, to, data, 1, false, (double[])null, 0.0);
+   }
+
+   /** topology.interpolate(from, to, data, order, near, mask, nullval) yields a value that has been
+    *  interpolated from the underlying from mesh to the point given by the vertex to. The given
+    *  data array is assumed to be the values at the from vertices, and mask is an array of 
     *  either 0 or 1 values indicating whether the equivalent vertex in from is included (1) or not
     *  (0) in the 'valid' region from which to interpolate. This may be null to indicate all 1's.
     *  If a point in to is considered 'invalid' by the mask, then nullval is used instead of the
     *  correct interpolated value. The near parameter is passed directly to the 
     *  topology.interpolation function.
-    *  Note that one can include non-0 and non-1 values in the mask; the function does not check
-    *  for these and merely requires that the interpolated value at the particular point in the to
-    *  matrix be greater than 0.5 to be included.
     */
-   public final double[] interpolate(Registration from, double[][] to, int order, boolean near,
-                                     double[] data, double[] mask, double nullval) {
-      Interpolator[] interp = interpolation(from, to, order, near);
-      double tmp = 1;
-      double[] res = new double[interp.length];
-      for (int i = 0; i < interp.length; ++i)
-         res[i] = (interp[i] == null? null : interp[i].interpolate(data, mask, nullval));
-      return res;
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                     int order, boolean near, double[] mask, double nullval) {
+      Interpolator[] interp = interpolation(from, new double[][] {to}, order, near);
+      return (interp[0] == null? nullval : interp[0].interpolate(data, mask, nullval));
    }
-   public final double[] interpolate(Registration from, double[][] to, int order, boolean near,
-                                     double[] data, boolean[] mask, double nullval) {
-      Interpolator[] interp = interpolation(from, to, order, near);
-      int tmp = 1;
-      double[] res = new double[interp.length];
-      for (int i = 0; i < interp.length; ++i)
-         res[i] = (interp[i] == null? null : interp[i].interpolate(data, mask, nullval));
-      return res;
+   
+   /** Uses nullval = 0 */
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                     int order, boolean near, double[] mask) {
+      return interpolate(from, to, data, order, near, mask, 0.0);
    }
-   /** topology.interpolate(from, to, order, data) is equivalent to 
-    *  topology.interpolate(from, to, order, false, data, null, 0).
-    */
-   public final double[] interpolate(Registration from, double[][] to, int order, double[] data) {
-      Interpolator[] interp = interpolation(from, to, order, false);
-      double[] res = new double[interp.length];
-      for (int i = 0; i < interp.length; ++i)
-         res[i] = (interp[i] == null? null : interp[i].interpolate(data));
-      return res;
+   /** Uses mask = null */
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                   int order, boolean near, double nullval) {
+      return interpolate(from, to, data, order, near, (double[])null, nullval);
    }
-   /** topology.interpolate(from, to, order, near, data) is equivalent to 
-    *  topology.interpolate(from, to, order, near, data, null, 0).
-    */
-   public final double[] interpolate(Registration from, double[][] to, int order, boolean near,
-                                     double[] data) {
-      Interpolator[] interp = interpolation(from, to, order, null);
-      double[] res = new double[interp.length];
-      for (int i = 0; i < interp.length; ++i)
-         res[i] = (interp[i] == null? null : interp[i].interpolate(data));
-      return res;
+   /** Uses near = false */
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                   int order, double[] mask, double nullval) {
+      return interpolate(from, to, data, order, false, mask, nullval);
    }
-   /** topology.interpolate(from, to, order, near, data) is equivalent to 
-    *  topology.interpolate(from, to, order, near, data, null, 0).
-    */
-   public final int[] interpolate(Registration from, double[][] to, int order, boolean near,
-                                  int[] data) {
-      Interpolator[] interp = interpolation(from, to, order, near);
-      int[] res = new int[interp.length];
-      for (int i = 0; i < interp.length; ++i)
-         res[i] = (interp[i] == null? null : interp[i].interpolate(data));
-      return res;
+   /** Uses order = 1 */
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                   boolean near, double[] mask, double nullval) {
+      return interpolate(from, to, data, 1, near, mask, nullval);
    }
-   /** topology.interpolateBytes(from, to, order, near, data) is equivalnet to 
-    *  topology.interpolate(from, to, order, near, nben.util.Numpy.double1FromBytes(data)).
-    */
-   public final double[] interpolateBytes(Registration from, double[][] to, int order, boolean near,
-                                          byte[] b) {
-      return interpolate(from, to, order, near, Numpy.double1FromBytes(b));
+
+   /** Uses nullval = 0 and order = 1*/
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                   boolean near, double[] mask) {
+      return interpolate(from, to, data, 1, near, mask, 0.0);
    }
+   /** Uses mask = null and order = 1 */
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                   boolean near, double nullval) {
+      return interpolate(from, to, data, 1, near, (double[])null, nullval);
+   }
+   /** Uses near = false and order = 1 */
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                   double[] mask, double nullval) {
+      return interpolate(from, to, data, 1, false, mask, nullval);
+   }
+   /** Uses nullval = 0 and near = false */
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                   int order, double[] mask) {
+      return interpolate(from, to, data, order, false, mask, 0.0);
+   }
+   /** Uses mask = null and near = false */
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                   int order, double nullval) {
+      return interpolate(from, to, data, order, false, (double[])null, nullval);
+   }
+   /** Uses mask = null and nullval = 0.0 */
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                   int order, boolean near) {
+      return interpolate(from, to, data, order, near, (double[])null, 0.0);
+   }
+
+
+   /** Uses nullval = 0 and order = 1 and near = false */
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                   double[] mask) {
+      return interpolate(from, to, data, 1, false, mask, 0.0);
+   }
+   /** Uses mask = null and order = 1 and near = false */
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                   double nullval) {
+      return interpolate(from, to, data, 1, false, (double[])null, nullval);
+   }
+   /** Uses nullval = 0 and near = false and mask = null*/
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                   int order) {
+      return interpolate(from, to, data, order, false, (double[])null, 0.0);
+   }
+   /** Uses nullval = 0 and order = 1 and mask = null*/
+   public final double interpolate(Registration from, double[] to, double[] data,
+                                   boolean near) {
+      return interpolate(from, to, data, 1, near, (double[])null, 0.0);
+   }
+
+   /** uses nullval = 0. order = 1, mask = null, and near = false */
+   public final double interpolate(Registration from, double[] to, double[] data) {
+      return interpolate(from, to, data, 1, false, (double[])null, 0.0);
+   }
+
 }
 

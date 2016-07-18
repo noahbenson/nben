@@ -75,7 +75,7 @@ public class RetinotopyMeshField extends ASimplexPotential {
       double[] pt = new double[X.length];
       for (i = 0; i < pt.length; ++i) pt[i] = X[i][u];
       // next, we want to find the interpolation coordinates for the nearest point
-      MeshTopology.Interpolator interp = topology.interpolate(registration, pt, 1, true); //#check
+      MeshTopology.Interpolator interp = topology.interpolation(registration, pt, 1, true);
       // the interp object can be used for angle; do this first:
       double predictAngle = interp.interpolate(angles);
       // do the gradient if we have been passed a valid workspace
@@ -94,10 +94,10 @@ public class RetinotopyMeshField extends ASimplexPotential {
             i = interp.indices[0];
             j = interp.indices[1];
             k = interp.indices[2];
-            a[0] = topology.coordinates[j][0] - topology.coordinates[i][0];
-            a[1] = topology.coordinates[j][1] - topology.coordinates[i][1];
-            b[0] = topology.coordinates[k][0] - topology.coordinates[i][0];
-            b[1] = topology.coordinates[k][1] - topology.coordinates[i][1];
+            a[0] = registration.coordinates[j][0] - registration.coordinates[i][0];
+            a[1] = registration.coordinates[j][1] - registration.coordinates[i][1];
+            b[0] = registration.coordinates[k][0] - registration.coordinates[i][0];
+            b[1] = registration.coordinates[k][1] - registration.coordinates[i][1];
             cx = Num.cross(a, b);
             // the math for this ends up working out however the cross product is scaled:
             G[0][0] = -cx[0] / cx[2];
@@ -139,7 +139,7 @@ public class RetinotopyMeshField extends ASimplexPotential {
       if (vertexAngles.length != vertexIndices.length)
          throw new IllegalArgumentException(
            "vertex indices, angles, and eccens must be the same length");
-      vertexAngles = vertexAngles.clone();
+      this.vertexAngles = vertexAngles.clone();
       // the simplex reference values need to be edited
       for (int i = 0; i < vertexIndices.length; ++i)
          M0[i] = angles[i];

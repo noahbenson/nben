@@ -72,39 +72,48 @@ public class RetinotopyMeshField extends ASimplexPotential {
       if (topology == null) return 0.0;
       int i, u = simplices[0][id];
       // first, extract the relevant point
-      double[] pt = new double[X.length];
+      double[] pt  = new double[X.length], npt;
       for (i = 0; i < pt.length; ++i) pt[i] = X[i][u];
       // next, we want to find the interpolation coordinates for the nearest point
-      MeshTopology.Interpolator interp = topology.interpolation(registration, pt, 1, true);
-      // the interp object can be used for angle; do this first:
-      double predictAngle = interp.interpolate(angles);
+      MeshTopology.Interpolator interp = topology.interpolation(registration, pt, 1, false);
       // do the gradient if we have been passed a valid workspace
-      if (G != null) {
-         // the normal vector to the triangle is the cross-product...
-         if (interp.indices.length != 3) {
-            // not in a triangle -- gradient must be 0
+      // the normal vector to the triangle is the cross-product...
+      if (interp == null || interp.indices == null || interp.indices.length != 3) {
+         // not in a triangle -- gradient must be 0
+         if (G != null) {
             G[0][0] = 0;
             G[0][1] = 0;
-         } else {
-            // the normal vector projected onto the 2D surface should give us the gradient
-            double[] a = new double[3],
-                     b = new double[3],
-                     cx;
-            int j, k;
-            i = interp.indices[0];
-            j = interp.indices[1];
-            k = interp.indices[2];
-            a[0] = registration.coordinates[j][0] - registration.coordinates[i][0];
-            a[1] = registration.coordinates[j][1] - registration.coordinates[i][1];
-            b[0] = registration.coordinates[k][0] - registration.coordinates[i][0];
-            b[1] = registration.coordinates[k][1] - registration.coordinates[i][1];
-            cx = Num.cross(a, b);
-            // the math for this ends up working out however the cross product is scaled:
-            G[0][0] = -cx[0] / cx[2];
-            G[0][1] = -cx[1] / cx[2];
          }
+         interp = topology.interpolation(registration, pt, 1, true);;
+      } else if (G != null) {
+         // the normal vector projected onto the 2D surface should give us the gradient
+         double[] a = new double[3],
+                  b = new double[3],
+                  normal;
+         int j, k;
+         i = interp.indices[0];
+         j = interp.indices[1];
+         k = interp.indices[2];
+         a[0] = registration.coordinates[j][0] - registration.coordinates[i][0];
+         a[1] = registration.coordinates[j][1] - registration.coordinates[i][1];
+         a[2] = angles[j] - angles[i];
+         b[0] = registration.coordinates[k][0] - registration.coordinates[i][0];
+         b[1] = registration.coordinates[k][1] - registration.coordinates[i][1];
+         b[2] = angles[k] - angles[i];
+         // the normal vector to the plane (z is the angle)
+         normal = Num.cross(a, b);
+         // let normal = (nx, ny, nz),
+         //     r0     = normal . a
+         // normal . (x,y,z) - r0 == 0
+         // nx x + ny y + nz z - r0 == 0
+         // z == (r0 - nx x - ny y)/nz
+         // dz/dx == -nx/nz
+         // dz/dy == -ny/nz
+         G[0][0] = -normal[0] / normal[2];
+         G[0][1] = -normal[1] / normal[2];
       }
-      return predictAngle;
+      // return the angle at this point
+      return interp.interpolate(angles);
    }
 
    /** RetinotopyMeshField(meshCoordinates, meshTriangles, meshAngles, meshEccens,

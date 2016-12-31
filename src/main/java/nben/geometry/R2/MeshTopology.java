@@ -105,10 +105,6 @@ public class MeshTopology {
          newTris[i][1] = tri[1];
          newTris[i][2] = tri[2];
       }
-      // if any edges were found but not completed, we don't have a complete mesh
-      if (foundEdges.size() > 0)
-         throw new IllegalArgumentException("Triangle mesh does not contain complements for all" +
-                                            " edges thus cannot cover the unit sphere");
       return MeshTopology._from(newTris, maxVertex);
    }
    /** MeshTopology._from(triangles, n) yields a MeshTopology with the given nx3 matrix of triangle

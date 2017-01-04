@@ -29,6 +29,11 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
 
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.CancellationException;
+
 /** A MeshTopology object stores the topological organization of a mesh topology defined in the 2D
  *  plane. A 2D mesh topology is used primarily to represent models in the plane.
  *  
@@ -240,8 +245,14 @@ public class MeshTopology {
       public final double[] weights;
       /** The value of the index (from indices) with the highest weight. */
       public final int closest;
+      /** The point that this interpolator interpolates */
+      public final double[] point;
+      /** True if the nearest point in the mesh to this point was used and false
+       *  otherwise.
+       */
+      public final boolean nearest;
       /** Construct an interpolator. */
-      public Interpolator(int[] idcs, double[] wgts) {
+      public Interpolator(int[] idcs, double[] wgts, double[] pt, boolean nearst) {
          if (idcs.length != wgts.length)
             throw new IllegalArgumentException("weight and index lengths must match");
          indices = idcs;
@@ -262,6 +273,8 @@ public class MeshTopology {
             for (int i = 0; i < weights.length; ++i)
                weights[i] = wgts[i] / tmp;
          }
+         point = pt;
+         nearest = nearst;
       }
 
       /** Interpolates from the vals and yields the result; ignore any masked vals. If all vals
@@ -618,9 +631,10 @@ public class MeshTopology {
             vtcs = new int[] {(d1 <= d2
                                ? (d1 <= d3? vtcs[0] : vtcs[2])
                                : (d2 <= d3? vtcs[1] : vtcs[2]))};
-            interp[i] = new Interpolator(vtcs, weights);
+            interp[i] = new Interpolator(vtcs, weights, p.coords, false);
          }
       } else if (order == 1) {
+         boolean nr = false;
          // prep our result
          interp = new Interpolator[to.length];
          for (i = 0; i < to.length; ++i) {
@@ -630,6 +644,7 @@ public class MeshTopology {
                if (near) {
                   p = from.hash.nearest(p, true);
                   j = from.hash.triangleContainerID(p);
+                  nr = true;
                }
                if (j == -1) {
                   interp[i] = null;
@@ -643,18 +658,20 @@ public class MeshTopology {
                                  from.hash.coordinates[vtcs[2]]);
             tot = tri.area();
             if (Num.zeroish(tot)) {
-               interp[i] = new Interpolator(vtcs, new double[] {1.0/3.0, 1.0/3.0, 1.0/3.0});
+               interp[i] = new Interpolator(vtcs,
+                                            new double[] {1.0/3.0, 1.0/3.0, 1.0/3.0},
+                                            p.coords, nr);
             } else {
                weights = new double[3];
                weights[0] = Triangle._from(p, tri.B, tri.C).area()/tot;
                weights[1] = Triangle._from(p, tri.C, tri.A).area()/tot;
                weights[2] = Triangle._from(p, tri.A, tri.B).area()/tot;
-               interp[i] = new Interpolator(vtcs, weights);
+               interp[i] = new Interpolator(vtcs, weights, p.coords, nr);
             }
          }
       } else {
          // a simple interpretation of the order parameter
-         interp = interpolation(from, to, 1);
+         interp = interpolation(from, to, 1, near);
          tot = 0;
          for (i = 0; i < interp.length; ++i) {
             weights = interp[i].weights;
@@ -904,5 +921,163 @@ public class MeshTopology {
       return interpolate(from, to, data, 1, false, (double[])null, 0.0);
    }
 
+
+   // Below here is a set of class/methods for fast parallel interpolation
+   private final class InterpolationWorker implements Runnable {
+      final int startID;           // the id we start with for this particular worker
+      final int workers;           // the number of workers total
+      final Interpolator[] interp; // the resulting interpolation objects
+      final Registration from;     // where we interp from
+      final double[][] to;         // the coordinate matrix to which we interpolate
+      final int[] subset;          // subset of vertices in to that we actually look at
+      final int order;             // interpolation order...
+      final boolean near;          // interpolate using nearest?
+      final boolean tr;            // is the to matrix 2xn (true) or nx2 (false)?
+      final int n;                 // number of points in the to matrix
+      public InterpolationWorker(int myid, int nworkers,
+                                 Registration f, double[][] t, int[] subset,
+                                 int ord, boolean nr,
+                                 Interpolator[] res) {
+         this.startID = myid;
+         this.workers = nworkers;
+         this.from = f;
+         this.to = t;
+         this.order = ord;
+         this.near = nr;
+         if (to.length == 2 && to[0].length != 2) {
+            this.n = to[0].length;
+            this.tr = true;
+         } else {
+            this.n = to.length;
+            this.tr = false;
+         }
+         this.interp = res;
+         if (subset != null) {
+            this.subset = subset;
+         } else {
+            this.subset = new int[this.n];
+            for (int i = 0; i < this.n; ++i) this.subset[i] = i;
+         }
+         if (this.order < 0) throw new IllegalArgumentException("Order must be non-negative");
+      }
+      public void run() {
+         int i, j, k;
+         Point p;
+         Triangle tri;
+         int[] vtcs;
+         double[] weights;
+         double tot;
+         MeshTopology.Interpolator ip;
+         if (order == 0) {
+            double d1, d2, d3;
+            weights = new double[] {1.0};
+            for (k = startID; k < subset.length; k += workers) {
+               i = subset[k];
+               p = (tr? Point._from(to[0][i], to[1][i]) : Point._from(to[i]));
+               j = from.hash.triangleContainerID(p);
+               vtcs = from.hash.triangles[j];
+               d1 = Num.euclideanDistance2(from.hash.coordinates[vtcs[0]], p.coords);
+               d2 = Num.euclideanDistance2(from.hash.coordinates[vtcs[1]], p.coords);
+               d3 = Num.euclideanDistance2(from.hash.coordinates[vtcs[2]], p.coords);
+               vtcs = new int[] {(d1 <= d2
+                                  ? (d1 <= d3? vtcs[0] : vtcs[2])
+                                  : (d2 <= d3? vtcs[1] : vtcs[2]))};
+               interp[i] = new Interpolator(vtcs, weights, p.coords, false);
+            }
+         } else {
+            boolean nr = false;
+            // prep our result
+            for (k = startID; k < subset.length; k += workers) {
+               i = subset[k];
+               p = (tr? Point._from(to[0][i], to[1][i]) : Point._from(to[i]));
+               j = from.hash.triangleContainerID(p);
+               if (j == -1) {
+                  if (near) {
+                     p = from.hash.nearest(p, true);
+                     j = from.hash.triangleContainerID(p);
+                     nr = true;
+                  }
+                  if (j == -1) {
+                     interp[i] = null;
+                     continue;
+                  }
+               }
+               vtcs = from.hash.triangles[j];
+               // split this triangle at the point p
+               tri = Triangle._from(from.hash.coordinates[vtcs[0]],
+                                    from.hash.coordinates[vtcs[1]],
+                                    from.hash.coordinates[vtcs[2]]);
+               tot = tri.area();
+               if (Num.zeroish(tot)) {
+                  interp[i] = new Interpolator(vtcs,
+                                               new double[] {1.0/3.0, 1.0/3.0, 1.0/3.0},
+                                               p.coords, nr);
+               } else {
+                  weights = new double[3];
+                  weights[0] = Triangle._from(p, tri.B, tri.C).area()/tot;
+                  weights[1] = Triangle._from(p, tri.C, tri.A).area()/tot;
+                  weights[2] = Triangle._from(p, tri.A, tri.B).area()/tot;
+                  interp[i] = new Interpolator(vtcs, weights, p.coords, nr);
+               }
+            }
+            if (order != 1) {
+               // a simple interpretation of the order parameter
+               tot = 0;
+               for (i = startID; i < n; i += workers) {
+                  weights = interp[i].weights;
+                  for (j = 0; j < weights.length; j++) {
+                     weights[i] = Math.pow(weights[i], order);
+                     tot += weights[i];
+                  }
+                  for (j = 0; j < weights.length; j++)
+                     weights[i] /= tot;
+               }
+            }
+         }
+      }
+   }
+   /** pinterpolation is identical to the interpolation function except that it automatically runs
+    *  the interpolation request across parallel threads.
+    */
+   public final Interpolator[] pinterpolation(Registration from, double[][] to, int[] subset,
+                                              int order, boolean near,
+                                              Interpolator[] res)
+      throws InterruptedException,
+             ExecutionException,
+             CancellationException,
+             NullPointerException, 
+             RejectedExecutionException {
+      InterpolationWorker[] iws = new InterpolationWorker[Par.workers()];
+      int n;
+      if (to.length == 2 && to[0].length != 2) n = to[0].length;
+      else n = to.length;
+      res = (res == null? new Interpolator[n] : res);
+      if (subset == null) {
+         subset = new int[n];
+         for (int i = 0; i < n; ++i) subset[i] = i;
+      }
+      for (int i = 0; i < iws.length; ++i)
+         iws[i] = new InterpolationWorker(i, iws.length, from, to, subset, order, near, res);
+      Par.run(iws);
+      return res;
+   }
+   public final Interpolator[] pinterpolation(Registration from, double[][] to, int[] subset,
+                                              int order, boolean near)
+      throws InterruptedException,
+             ExecutionException,
+             CancellationException,
+             NullPointerException, 
+             RejectedExecutionException {
+      return pinterpolation(from, to, subset, order, near, null);
+   }
+   public final Interpolator[] pinterpolation(Registration from, double[][] to,
+                                              int order, boolean near)
+      throws InterruptedException,
+             ExecutionException,
+             CancellationException,
+             NullPointerException, 
+             RejectedExecutionException {
+      return pinterpolation(from, to, null, order, near, null);
+   }
 }
 

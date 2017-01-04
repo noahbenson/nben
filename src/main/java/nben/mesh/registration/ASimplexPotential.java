@@ -35,6 +35,8 @@ import java.util.concurrent.CancellationException;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.LinkedList;
 
 /** The ASimplexPotential class defines the code that computates of potential fields based on the
  *  interactions between (usually small) submeshes in the mesh. Examples of these include edge,
@@ -325,8 +327,15 @@ public abstract class ASimplexPotential implements IPotentialField {
       for (i = 0; i < m; ++i) allSimplices[i] = i;
       this.allVertices = new int[n];
       for (i = 0; i < n; ++i) allVertices[i] = i;
-      // the initial subset for any potential field is all vertices
-      this.subset = allVertices;
+      // the initial subset for any potential field is all vertices that appear in a simplex
+      LinkedList<Integer> ss = new LinkedList<Integer>();
+      for (i = 0; i < n; ++i) {
+         if (simplexIndex[i] != null)
+            ss.add(new Integer(i));
+      }
+      this.subset = new int[ss.size()];
+      i = 0;
+      while (!ss.isEmpty()) this.subset[i++] = ss.pop().intValue();
       this.simplexSubset = allSimplices;
       // finally, make our workers
       int nwork = Par.workers();

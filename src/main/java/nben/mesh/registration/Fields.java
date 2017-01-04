@@ -25,6 +25,7 @@ package nben.mesh.registration;
 import nben.mesh.registration.AnchorPotential;
 import nben.mesh.registration.EdgePotential;
 import nben.mesh.registration.AnglePotential;
+import nben.mesh.registration.MeshPotential;
 
 import nben.mesh.registration.HarmonicFunction;
 import nben.mesh.registration.GaussianFunction;
@@ -581,6 +582,29 @@ public final class Fields {
    public static AnglePotential newWellAnglePotential(int[][] T, double[][] X) {
       return new AnglePotential(new InfiniteWellFunction(1.0 / (3*T[0].length), 0.0, Math.PI),
                                 Util.facesToAngles(T), X);
+   }
+
+   /** newHarmonicMeshPotential() yields
+    *
+    *  @param scale the scales of the HarmonicFunction form (default: 1.0)
+    *  @param shape the shapes of the HarmonicFunction form (default: 2.0)
+    *  @param fmCoords the (n x 2) matrix of coordinates of the mesh vertices for the field mesh
+    *  @param fmFaces the (n x 3) matrix of faces in ccw order
+    *  @param fmValues the (n x d) matrix of the field values at the vertices
+    *  @param vertices the list of vertex IDs that are covered by the field mesh
+    *  @param values the (m x d) matrix of values at the vertices where m is the same as the length
+    *         of the vertices parameter
+    *  @param X the reference coordinate matrix for the potential
+    */
+   public static MeshPotential newHarmonicMeshPotential(double[] scale, double[] shape,
+                                                        double[][] fmCoords, int[][] fmFaces,
+                                                        double[][] fmValues,
+                                                        int[] vertices, double[][] values,
+                                                        double[][] X) {
+      HarmonicFunction[] fs = new HarmonicFunction[scale.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new HarmonicFunction(scale[i] / vertices.length, shape[i]);
+      return new MeshPotential(fs, fmCoords, fmFaces, fmValues, vertices, values, X);
    }
 
    /** newHarmonicAnchorPotential(s, q, vertices, anchorPoints, X) yields an AnchorPotential object

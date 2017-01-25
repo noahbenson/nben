@@ -195,7 +195,7 @@ public class MeshPotential extends ASimplexPotential {
       // the simplex reference values need to be edited
       for (j = 0; j < vertexValues.length; ++j) {
          for (i = 0; i < vertexIndices.length; ++i)
-            M0[i + j*n] = values[j][i];
+            M0[i + j*n] = vertexValues[j][i];
       }
       // make the dimension notes
       this.simplexValueDimensions = new int[n*2];

@@ -757,7 +757,11 @@ public class Minimizer {
                   // too-large step-size); swap x0 back to x and grad0 back to grad and try with a
                   // smaller step
                   copyMatrix(m_X, Xbak, null);
-                  for (ii = 0; ii < dt.length; ++ii) dt[ii] *= 0.5;
+                  tot = 0;
+                  for (ii = 0; ii < dt.length; ++ii) {
+                     dt[ii] *= 0.5;
+                     tot += dt[ii];
+                  }
                   // we want to save petry here; this is so that, if we get dt to 0 and petry is
                   // actually equal to pe, we know that we've actually reached a point at which the
                   // potential is effectively flat

@@ -458,6 +458,11 @@ public class Minimizer {
     */
    synchronized public Report nimbleStep(double deltaPE, int maxSteps, double z, int partitions)
       throws Exception {
+      return nimbleStep(deltaPE, maxSteps, z, partitions, false);
+   }
+   synchronized public Report nimbleStep(double deltaPE, int maxSteps, double z, int partitions,
+                                         boolean preferLarger)
+      throws Exception {
       double maxNorm, t, t0, dt, dt0, dx, pe, pe0, peStep, peStep0, dtStep;
       int miniStepsPerStep = (1 << partitions);
       int k = 0;
@@ -513,7 +518,7 @@ public class Minimizer {
                // scaled up to be appropriate for how often this subset is updated;
                for (part = 0; part < partitions; ++part) {
                   // only do this part if it is divisible by the appropriate power
-                  if ((miniStep + 1) % (1 << part) > 0) continue;
+                  if (preferLarger && (miniStep + 1) % (1 << part) > 0) continue;
                   // we need to recalculate potential etc, as it may have changed...
                   clearGradient(grad, ss[part]);
                   valTmp = new PotentialValue(fields[part], ss[part], m_X, grad, norms);

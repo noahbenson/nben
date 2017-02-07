@@ -664,24 +664,23 @@ public class Minimizer {
    }
    public int[][] substeps(double[] norms) {return substeps(norms, 8);}
 
-   /** min.randomStep(dt, ms, z, p, s) follows the gradient of its potential-field and configuration
+   /** min.randomStep(dt, ms, z) follows the gradient of its potential-field and configuration
     *  until it has either traveled for dt units of time or has taken ms steps in such a way that no
     *  vertex ever moves more than distance z in a single step. 
     *  On error, an exception is thrown, most likely due to a problem with multi-threading.
-    *  The randomStep method is basically identical to the step method except that it takes an
-    *  additional parameter p, which tells it how many partitions to divide the vertices into. Each
-    *  step, the randomStep algorithm partitions the vertices randomly into p sets, each of which is
-    *  minimized for s steps on its own, independent of the other sets. In theory, this should
-    *  prevent vertices that are "stuck" from effectively halting the minimization.
+    *  The randomStep method is basically identical to the step method except that it uses a
+    *  different step size for each vertex; these step sizes are randomly drawn from an exponential
+    *  distribution with mean z/M where z is the parameter to randomStep and M is the norm of the
+    *  gradient of the vertex. In theory, this should allow vertices that are  "stuck" in local
+    *  minima from effectively halting the minimization.
     *
     *  @param deltaPE the maximum fraction of the potential to reduce
     *  @param maxSteps the maximum number of steps to take during the minimization
     *  @param z the maximum distance any single vertex should ever travel during a step
-    *  @param partitions the number of partitions to divide the vertices into
-    *  @param substeps the number of steps to run each partition before re-partitioning
+    *  @param inv if true, use the distribution mean M/z instead of z/M
     *  @return a Report object detailing the minimization trajectory
     */
-   synchronized public Report randomStep(double deltaPE, int maxSteps, double z)
+   synchronized public Report randomStep(double deltaPE, int maxSteps, double z, boolean inv)
       throws Exception {
       double t, t0, pe, pe0, petry, maxNorm, tot;
       int k = 0, ii;
@@ -725,10 +724,11 @@ public class Minimizer {
             for (ii = 0; ii < dt.length; ++ii) {
                if (Num.zeroish(norms[ii]))
                   dt[ii] = 0.0;
+               else if (inv)
+                  // this is an inverse-trick for drawing from an exponential distribution
+                  dt[ii] = Math.log(1.0 - rand.nextDouble()) * (-norms[ii]/z);
                else
-                  // this is an inverse-trick for drawing from an exponential distribution with
-                  // 1/lambda = z/norms[ii]
-                  dt[ii] = Math.log(1.0 - rand.nextDouble()) / (-norms[ii] / z);
+                  dt[ii] = Math.log(1.0 - rand.nextDouble()) * (-z/norms[ii]);
                tot += dt[ii];
             }
             t0 = t;
@@ -791,6 +791,9 @@ public class Minimizer {
       }
       return re;
    }
-
+   public Report randomStep(double deltaPE, int maxSteps, double z)
+      throws Exception {
+      return randomStep(deltaPE, maxSteps, z, false);
+   }
 }
 

@@ -738,8 +738,10 @@ public class Minimizer {
                if (Num.zeroish(tot)) {
                   if (Num.zeroish(petry - pe)) {
                      // this is actually fine --- we've reached a point where the potential is
-                     // flat, within our numerical ability to measure it
-                     k = maxSteps; // so that we break out entirely
+                     // flat, within our numerical ability to measure it;
+                     // if we just break out here, we should get new dt's and this may allow us
+                     // to progress. Count it as a step, however.
+                     ++k;
                      break;
                   } else
                      throw new Exception("Step-size decreased to effectively 0 at step " + k);

@@ -57,7 +57,8 @@ public class Minimizer {
       public final int id;
       public final int workers;
       public int[] subset;      // intention is that this gets set by Minimizer during steps
-      public double stepSize;   // the step size to take; negative to minimize, positive to revert
+      public double stepSize;   // the step size to take; positive to minimize, negative to revert
+      public double[] stepSizes; // if not null, use these, one per vertex, instead
       public double[][] gradient;
       public double[][] X;
       
@@ -65,22 +66,41 @@ public class Minimizer {
          id = i;
          workers = nwork;
          subset = null;
-         stepSize = -1.0;
+         stepSize = 1.0;
       }
       public void run() {
          int i, j, u;
-         if (subset == null) {
-            u = m_X[0].length;
-            for (j = 0; j < X.length; ++j) {
-               for (i = id; i < u; i += workers)
-                  X[j][i] += gradient[j][i] * stepSize;
+         if (stepSizes == null) {
+            double ss = -stepSize;
+            if (subset == null) {
+               u = m_X[0].length;
+               for (j = 0; j < X.length; ++j) {
+                  for (i = id; i < u; i += workers)
+                     X[j][i] += gradient[j][i] * ss;
+               }
+            } else {
+               for (i = id; i < subset.length; i += workers) {
+                  u = subset[i];
+                  for (j = 0; j < X.length; ++j)
+                     X[j][u] += gradient[j][u]*ss;
+               }
             }
          } else {
-            for (i = id; i < subset.length; i += workers) {
-               u = subset[i];
-               for (j = 0; j < X.length; ++j)
-                  X[j][u] += gradient[j][u]*stepSize;
+            if (subset == null) {
+               u = m_X[0].length;
+               for (j = 0; j < X.length; ++j) {
+                  for (i = id; i < u; i += workers)
+                     X[j][i] += gradient[j][i] * -stepSizes[i];
+               }
+            } else {
+               for (i = id; i < subset.length; i += workers) {
+                  u = subset[i];
+                  for (j = 0; j < X.length; ++j)
+                     X[j][u] += gradient[j][u] * -stepSizes[u];
+               }
             }
+            // when done, we reset the step sizes to null
+            stepSizes = null;
          }
       }
    }
@@ -294,7 +314,18 @@ public class Minimizer {
          m_stepWorkers[i].subset = subset;
          m_stepWorkers[i].X = X;
          m_stepWorkers[i].gradient = grad;
-         m_stepWorkers[i].stepSize = -dt;
+         m_stepWorkers[i].stepSize = dt;
+         m_stepWorkers[i].stepSizes = null;
+      }
+      Par.run(m_stepWorkers);
+   }
+   synchronized private void takeStepArr(double[][] X, double[] dt, double[][] grad, int[] subset)
+      throws Exception {
+      for (int i = 0; i < m_stepWorkers.length; ++i) {
+         m_stepWorkers[i].subset = subset;
+         m_stepWorkers[i].X = X;
+         m_stepWorkers[i].gradient = grad;
+         m_stepWorkers[i].stepSizes = dt;
       }
       Par.run(m_stepWorkers);
    }
@@ -650,135 +681,111 @@ public class Minimizer {
     *  @param substeps the number of steps to run each partition before re-partitioning
     *  @return a Report object detailing the minimization trajectory
     */
-   synchronized public Report randomStep(double deltaPE, int maxSteps, double z, int partitions,
-                                         int substeps)
+   synchronized public Report randomStep(double deltaPE, int maxSteps, double z)
       throws Exception {
-      double maxNorm, t, t0, dt, dt0, dx, pe, pe0, peStep, peStep0, dtStep;
-      int miniStepsPerStep = substeps <= 0? (1 << partitions) : substeps;
+      double t, t0, pe, pe0, petry, maxNorm, tot;
       int k = 0, ii;
-      int miniStep, part;
-      boolean cont;
       Random rand = ThreadLocalRandom.current();
-      // fields that get partitioned up
-      IPotentialField[] fields = new IPotentialField[partitions];
-      int[][] ss = new int[partitions][];
-      int[] categories = new int[m_X[0].length];
-      int[] ncat = new int[partitions];
-      if (deltaPE <= 0) return null;
+      if (deltaPE <= 0 || maxSteps < 1) return null;
       if (z <= 0) throw new IllegalArgumentException("parameter z to step must be > 0");
       // buffers in which we store gradient and gradient norms...
+      double[]   dt       = new double[m_X[0].length];
       double[][] grad     = new double[m_X.length][m_X[0].length];
       double[][] gradTmp  = new double[m_X.length][m_X[0].length];
       double[]   norms    = new double[m_X[0].length];
       double[]   normsTmp = new double[m_X[0].length];
       double[][] Xbak     = new double[m_X.length][m_X[0].length];
-      double[]   dtPart   = new double[partitions];
+      double[][] buf2;
+      double[]   buf1;
       // first thing: calculate the total gradient!
-      PotentialValue val, valTmp;
-      val = currentPotential(grad, norms);
+      PotentialValue val = currentPotential(grad, norms);
+      PotentialValue valTmp;
+      maxNorm = norms[val.steepestVertex];
       if (Double.isNaN(val.potential))
          throw new IllegalArgumentException("Initial state has a NaN potential");
       else if (Double.isInfinite(val.potential))
          throw new IllegalArgumentException("Initial state has a non-finite potential");
-      // now make a copy of X
+      // also, save a backup X
       copyMatrix(Xbak, m_X, null);
-      // okay, iteratively take appropriately-sized overall-steps...
-      maxNorm = norms[val.steepestVertex];
+      // okay, iteratively take appropriately-sized steps...
+      t = 0;
       pe0 = val.potential;
       pe = pe0;
-      dx = 0;
-      t = 0;
+      petry = pe;
       Report re = new Report(pe0);
       try {
-         while ((1.0 - pe/pe0) < deltaPE && k++ < maxSteps) {
+         while ((1.0 - pe/pe0) < deltaPE && k < maxSteps) {
             if (Num.zeroish(maxNorm)) {
+               // this isn't really an error; we've arrived at a local minimum or saddle point
                //throw new Exception("gradient is effectively 0");
-               // this is good, right? =)
                break;
             }
-            peStep0 = pe;
-            Arrays.fill(dtPart, 0);
             // pick our start step size
-            dt0 = z / maxNorm;
+            tot = 0.0;
+            for (ii = 0; ii < dt.length; ++ii) {
+               if (Num.zeroish(norms[ii]))
+                  dt[ii] = 0.0;
+               else
+                  // this is an inverse-trick for drawing from an exponential distribution with
+                  // 1/lambda = z/norms[ii]
+                  dt[ii] = Math.log(1.0 - rand.nextDouble()) / (-norms[ii] / z);
+               tot += dt[ii];
+            }
             t0 = t;
-            // we want to make some substeps to run through... do this randomly
-            for (part = 0; part < partitions; ++part)
-               ncat[part] = 0;
-            for (ii = 0; ii < categories.length; ++ii) {
-               categories[ii] = rand.nextInt(partitions);
-               ++ncat[categories[ii]];
-            }
-            for (part = 0; part < partitions; part++)
-               ss[part] = new int[ncat[part]];
-            for (ii = 0; ii < categories.length; ++ii) {
-               part = categories[ii];
-               ss[part][--ncat[part]] = ii;
-            }
-            // okay, that's set; now create the fields
-            for (part = 0; part < partitions; part++)
-               fields[part] = m_field.subfield(ss[part]);
-            // okay, we make <ministepsPerStep> steps total...
-            for (miniStep = 0; miniStep < miniStepsPerStep; ++miniStep) {
-               // on this mini-step, we update the appropriate subsets using a max step-size of dt
-               // scaled up to be appropriate for how often this subset is updated;
-               for (part = 0; part < partitions; ++part) {
-                  // we need to recalculate potential etc, as it may have changed...
-                  clearGradient(grad, ss[part]);
-                  valTmp = new PotentialValue(fields[part], ss[part], m_X, grad, norms);
-                  // also skip this part if the gradient is basically 0
-                  if (Num.zeroish(valTmp.gradientLength)) continue;
-                  // we always start with this stepsize, scaled up based on partition number...
-                  dt = dt0 * (1 << part);
-                  // see if the current step-size works; if not we'll halve it and try again...
-                  peStep = valTmp.potential;
-                  cont = true;
-                  while (cont) {
-                     // make sure we aren't below a threshold...
-                     if (Num.zeroish(dt)) {
-                        //throw new Exception("Step-size decreased to effectively 0");
-                        // we actually need to consider if we've reached a minimum here: if the
-                        // potential does not change, then we have reached some flat point. We only
-                        // need to worry about this on the outer loops, though.
-                        break;
-                     }
-                     // take a single step...
-                     takeStep(m_X, dt, grad, ss[part]);
-                     // calculate the new gradient/potential
-                     valTmp = new PotentialValue(fields[part], ss[part], m_X, gradTmp, normsTmp);
-                     if (Double.isNaN(valTmp.potential)) {
-                        throw new IllegalStateException("Potential function yielded NaN");
-                     } else if (Double.isInfinite(valTmp.potential) || peStep < valTmp.potential) {
-                        // we broke a triangle or we failed to reduce potential (perhaps due to a 
-                        // too-large step-size); swap x0 back to x and grad0 back to grad and try 
-                        // with a smaller step
-                        copyMatrix(m_X, Xbak, ss[part]);
-                        dt *= 0.5;
-                     } else {
-                        // the step was a success!
-                        copyMatrix(Xbak, m_X, ss[part]);
-                        dtPart[part] += dt;
-                        cont = false;
-                     }
-                  }
+            // see if the current step-size works; if not we'll halve it and try again...
+            while (t0 == t) {
+               // make sure we aren't below a threshold...
+               if (Num.zeroish(tot)) {
+                  if (Num.zeroish(petry - pe)) {
+                     // this is actually fine --- we've reached a point where the potential is
+                     // flat, within our numerical ability to measure it
+                     k = maxSteps; // so that we break out entirely
+                     break;
+                  } else
+                     throw new Exception("Step-size decreased to effectively 0 at step " + k);
                }
-            }
-            // we've completed a series of miniSteps -- that means we've made a Step!
-            valTmp = val;
-            Arrays.sort(dtPart);
-            dtStep = dtPart[partitions - 1];
-            t += dtStep;
-            val = currentPotential(grad, norms);
-            pe = val.potential;
-            re.push(dtStep, val.gradientLength * dtStep, maxNorm, valTmp.potential - pe);
-            maxNorm = norms[val.steepestVertex];
-            // check if we have reached a flat point
-            if (Num.eq(pe, peStep0)) {
-               // this is not considered an error for now: just exit gracefully
-               //throw new IllegalStateException("Gradient is effectively flat");
-               break;
+               // take a step; this copies the current coordinates (m_X) into m_X0; same for grad
+               takeStepArr(m_X, dt, grad, null);
+               // now, get the new potential value...
+               clearGradient(gradTmp);
+               valTmp = currentPotential(gradTmp, normsTmp);
+               // see if this was a valid step...
+               if (Double.isNaN(valTmp.potential)) {
+                  throw new IllegalStateException("Potential function yielded NaN");
+               } else if (Double.isInfinite(valTmp.potential) || valTmp.potential >= pe) {
+                  // we broke a triangle or we failed to reduce potential (perhaps due to a 
+                  // too-large step-size); swap x0 back to x and grad0 back to grad and try with a
+                  // smaller step
+                  copyMatrix(m_X, Xbak, null);
+                  for (ii = 0; ii < dt.length; ++ii) dt[ii] *= 0.5;
+                  // we want to save petry here; this is so that, if we get dt to 0 and petry is
+                  // actually equal to pe, we know that we've actually reached a point at which the
+                  // potential is effectively flat
+                  petry = pe;
+               } else {
+                  // We've completed a step!
+                  ++k;
+                  // replace the various progress-tracking value with the new ones
+                  val = valTmp;
+                  buf2 = grad;
+                  grad = gradTmp;
+                  gradTmp = buf2;
+                  buf1 = norms;
+                  norms = normsTmp;
+                  normsTmp = buf1;
+                  maxNorm = norms[val.steepestVertex];
+                  copyMatrix(Xbak, m_X, null);
+                  // push this step onto the report...
+                  re.push(z, val.gradientLength * z, maxNorm, val.potential - pe);
+                  // update the time, total distance, and potential
+                  t += z;
+                  pe = val.potential;
+                  petry = pe;
+               }
             }
          }
       } finally {
+         // freeze the report and save it...
          re.freeze(val == null? pe : val.potential);
          report = re;
       }

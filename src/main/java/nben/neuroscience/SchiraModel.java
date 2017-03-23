@@ -309,8 +309,10 @@ public class SchiraModel {
             // step along grad
             tmp1 = d2 / (dz[0]*dz[0] + dz[1]*dz[1]);
             do {
-               if (tmp1 < tol)
-                  throw new IllegalStateException("stepsize decreased to 0...");
+               if (tmp1 < tol) {
+                  //throw new IllegalStateException("stepsize decreased to 0...");
+                  break;
+               }
                z[0] = z0[0] - tmp1*dz[0];
                z[1] = z0[1] - tmp1*dz[1];
                layerlessTx(z);

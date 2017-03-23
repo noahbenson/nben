@@ -287,7 +287,7 @@ public class SchiraModel {
          double[] dz = new double[2];
          final double tol = 1e-14;
          double delt = 0.1;
-         double d, d2, tmp1, tmp2;
+         double d, d2, tmp1, tmp2 = -1.0;
          z0[0] = 0.11; z0[1] = -0.27;
          int i;
          // find dist...
@@ -310,8 +310,10 @@ public class SchiraModel {
             tmp1 = d2 / (dz[0]*dz[0] + dz[1]*dz[1]);
             do {
                if (tmp1 < tol) {
-                  //throw new IllegalStateException("stepsize decreased to 0...");
-                  break;
+                  if (tmp2 < 0)
+                     throw new IllegalStateException("stepsize decreased to 0...");
+                  else
+                     break;
                }
                z[0] = z0[0] - tmp1*dz[0];
                z[1] = z0[1] - tmp1*dz[1];

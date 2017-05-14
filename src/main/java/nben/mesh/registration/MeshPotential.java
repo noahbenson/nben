@@ -50,7 +50,7 @@ public class MeshPotential extends ASimplexPotential {
    /** the polar angle values of the points being tracked */
    public final double[][] vertexValues;
    /** the private array of interpolation objects that gets updated every calculation */
-   private MeshTopology.Interpolator[] m_interps;
+   protected MeshTopology.Interpolator[] m_interps;
 
    // a simple function to turn a list of vertexID's into simplices for ASimplexPotential
    private static final int[][] vertexIDsToSimplices(int[] vertexIDs) {
@@ -111,14 +111,12 @@ public class MeshPotential extends ASimplexPotential {
       MeshTopology.Interpolator interp = m_interps[u];
       // do the gradient if we have been passed a valid workspace
       // the normal vector to the triangle is the cross-product...
-      if (interp.nearest) {
+      if (interp == null || interp.nearest) {
          // not in a triangle -- gradient must be 0
          if (G != null) {
-            for (ii = 0; ii < G.length; ++ii) {
-               G[ii][0] = 0;
-               G[ii][1] = 0;
-            }
-         }
+            G[0][0] = 0;
+            G[0][1] = 0;
+         }            
       } else if (G != null) {
          // the normal vector projected onto the 2D surface should give us the gradient
          double[] a = new double[3],
@@ -147,7 +145,8 @@ public class MeshPotential extends ASimplexPotential {
          G[0][1] = -normal[1] / normal[2];
       }
       // return the values at this point
-      return interp.interpolate(values[dim]);
+      if (interp == null) return 0;
+      else return interp.interpolate(values[dim]);
    }
 
    /** MeshPotential(meshCoordinates, meshTriangles, meshAngles, meshEccens,
@@ -161,7 +160,7 @@ public class MeshPotential extends ASimplexPotential {
     *  @param meshTriangles the N x 3 matrix of vertex indices (into meshCoordinates) that specify
     *                       the triangles in the mesh
     *  @param meshValues the D x N matrix of field values; D can be any number but must match
-                         the size of vertexValues
+    *                    the size of vertexValues
     *  @param vertexIndices the M-length vector of indices of the vertices at which the potential
     *                       will be calculated
     *  @param vertexValues the D x M matrix of values for the vertices; D must match meshValues
@@ -177,7 +176,10 @@ public class MeshPotential extends ASimplexPotential {
       super(doubleDiffFns(f), vertexIDsToSimplices(vertexIndices), X0);
       topology = MeshTopology.from(meshTriangles);
       registration = topology.register(meshCoordinates);
-      int i, j, d = meshValues.length, n = vertexIndices.length, m = registration.coordinates.length;
+      int i, j,
+          d = meshValues.length,
+          n = vertexIndices.length,
+          m = registration.coordinates.length;
       if (d != vertexValues.length)
          throw new IllegalArgumentException("number of mesh and vertex value dims must match");
       for (i = 0; i < meshValues.length; ++i) {
@@ -193,12 +195,12 @@ public class MeshPotential extends ASimplexPotential {
       // the simplex reference values need to be edited
       for (j = 0; j < vertexValues.length; ++j) {
          for (i = 0; i < vertexIndices.length; ++i)
-            M0[i + j*n] = values[j][i];
+            M0[i + j*n] = vertexValues[j][i];
       }
       // make the dimension notes
       this.simplexValueDimensions = new int[n*2];
       for (i = 0; i < d; i++) {
-         m = d*i;
+         m = n*i;
          for (j = 0; j < n; ++j) this.simplexValueDimensions[j + m] = i;
       }
       // allocate our private data-slots

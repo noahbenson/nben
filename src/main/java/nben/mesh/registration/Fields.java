@@ -607,6 +607,31 @@ public final class Fields {
       return new MeshPotential(fs, fmCoords, fmFaces, fmValues, vertices, values, X);
    }
 
+   /** newGaussianMeshPotential() yields
+    *
+    *  @param scale the scales of the GaussianFunction form (default: 1.0)
+    *  @param shape the shapes of the GaussianFunction form (default: 2.0)
+    *  @param sig the standard deviation of the GaussianFunction form (default: 1.0)
+    *  @param fmCoords the (n x 2) matrix of coordinates of the mesh vertices for the field mesh
+    *  @param fmFaces the (n x 3) matrix of faces in ccw order
+    *  @param fmValues the (n x d) matrix of the field values at the vertices
+    *  @param vertices the list of vertex IDs that are covered by the field mesh
+    *  @param values the (m x d) matrix of values at the vertices where m is the same as the length
+    *         of the vertices parameter
+    *  @param X the reference coordinate matrix for the potential
+    */
+   public static MeshPotential newGaussianMeshPotential(double[] scale, double[] sig,
+                                                        double[] shape,
+                                                        double[][] fmCoords, int[][] fmFaces,
+                                                        double[][] fmValues,
+                                                        int[] vertices, double[][] values,
+                                                        double[][] X) {
+      GaussianFunction[] fs = new GaussianFunction[vertices.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new GaussianFunction(scale[i]/vertices.length, sig[i], shape[i]);
+      return new MeshPotential(fs, fmCoords, fmFaces, fmValues, vertices, values, X);
+   }
+
    /** newHarmonicAnchorPotential(s, q, vertices, anchorPoints, X) yields an AnchorPotential object
     *  that operates over the given list of vertices, each of which is attracted to the
     *  corresponding anchor point in the (dims x m)-sized matrix, anchorPoints, where m is the

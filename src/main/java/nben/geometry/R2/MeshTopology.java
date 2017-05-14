@@ -988,6 +988,7 @@ public class MeshTopology {
             boolean nr = false;
             // prep our result
             for (k = startID; k < subset.length; k += workers) {
+               nr = false;
                i = subset[k];
                p = (tr? Point._from(to[0][i], to[1][i]) : Point._from(to[i]));
                j = from.hash.triangleContainerID(p);

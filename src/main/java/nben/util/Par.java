@@ -51,7 +51,7 @@ public final class Par {
     *  small calculation instead of executing it directly in the current thread. Generally speaking,
     *  if you have a small calculation that needs to be done n times, you should do it in a loop in
     *  the current thread if n is less than this value. This is by no means a hard-and-fast absolute
-    *  recommendation --- it is merely a guideline.
+    *  recommendation --- it is merely a suggestion.
     */
    public final static int MIN_SUGGESTED_TASKS = 200;
 
@@ -161,7 +161,7 @@ public final class Par {
          }
          return res;
       } else {
-         return null;
+         return new Object[0];
       }
    }
    /** Par.run(cs, res) runs the given set of Callable workers over the threads of the Par class's
@@ -205,7 +205,7 @@ public final class Par {
          }
          return res;
       } else {
-         return null;
+         return new T[0];
       }
    }
 

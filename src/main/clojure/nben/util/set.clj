@@ -24,14 +24,6 @@
   (:use nben.util.typedef))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Some handy tests that aren't included in standard cojure
-(defn map-entry?
-  "(map-entry? me) yields true if me is a map-entry or map-entry-like object on which the functions
-     key and val will return meaningful values."
-  [me]
-  (or (instance? clojure.lang.IMapEntry me) (instance? java.util.Map$Entry me)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Handy types for making sets out of keys of maps...
 (def-set-type MapKeySet [map]
   (contains? [_ o] (contains? map o))

@@ -30,9 +30,21 @@
 
 ;; #ref? ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn ref?
-  "(ref? r) yields true if r is an instance of clojure.lang.IRef and false otherwise."
+  "(ref? r) yields true if r is an instance of clojure.lang.Ref and false otherwise."
+  [m]
+  (instance? clojure.lang.Ref m))
+
+;; #iref? ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn iref?
+  "(iref? r) yields true if r is an instance of clojure.lang.IRef and false otherwise."
   [m]
   (instance? clojure.lang.IRef m))
+
+;; #agent? ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn agent?
+  "(agent? r) yields true if r is an instance of clojure.lang.Agent and false otherwise."
+  [m]
+  (instance? clojure.lang.Agent m))
 
 ;; #named? ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn named?

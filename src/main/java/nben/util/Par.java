@@ -205,7 +205,7 @@ public final class Par {
          }
          return res;
       } else {
-         return new T[0];
+         return res;
       }
    }
 

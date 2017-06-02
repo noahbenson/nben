@@ -4,18 +4,18 @@
   :license {:name "GNU General Public License"
             :url "http://www.gnu.org/licenses/"}
   ;; dependencies
-  :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/core.incubator "0.1.3"]
+  :dependencies [[org.clojure/clojure "1.8.0"]
+                 [org.clojure/core.incubator "0.1.4"]
                  [criterium "0.4.3"] ;; for benchmarking (may remove in future)
                  [org.clojure/data.priority-map "0.0.7"]
                  [org.clojure/data.finger-tree "0.0.2"]
                  [org.jordanlewis/data.union-find "0.1.0"]
-                 [org.clojure/data.int-map "0.2.0"]
+                 [org.clojure/data.int-map "0.2.4"]
                  [me.raynes/fs "1.4.6"]
-                 [clj-time "0.10.0"]
+                 [clj-time "0.13.0"]
                  [smee/binary "0.5.1"]
-                 [net.mikera/core.matrix "0.49.0"]
-                 [potemkin "0.3.13"]]
+                 ;[net.mikera/core.matrix "0.59.0"]
+                 [potemkin "0.4.3"]]
   ;; location of source codes
   :source-paths ["src/main/clojure"]
   :java-source-paths ["src/main/java"]

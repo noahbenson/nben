@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>nben</groupId>
   <artifactId>nben</artifactId>
@@ -15,10 +14,9 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:git://github.com//.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com//.git</developerConnection>
-    <tag>1fc62c1f267c6f32576f5453da0322dd7de1c7d7</tag>
-    <url>https://github.com//</url>
+    <tag>34c193404e9025b0359c874fdce2cc20ce9ebe6b
+</tag>
+    <url/>
   </scm>
   <build>
     <sourceDirectory>src/main/clojure</sourceDirectory>
@@ -29,9 +27,6 @@
       </resource>
     </resources>
     <testResources>
-      <testResource>
-        <directory>dev-resources</directory>
-      </testResource>
       <testResource>
         <directory>resources</directory>
       </testResource>
@@ -56,16 +51,6 @@
               </sources>
             </configuration>
           </execution>
-          <execution>
-            <id>add-test-source</id>
-            <phase>generate-test-sources</phase>
-            <goals>
-              <goal>add-test-source</goal>
-            </goals>
-            <configuration>
-              <sources/>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
     </plugins>
@@ -73,7 +58,7 @@
   <repositories>
     <repository>
       <id>central</id>
-      <url>http://repo1.maven.org/maven2/</url>
+      <url>https://repo1.maven.org/maven2/</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
@@ -96,12 +81,12 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
-      <version>1.7.0</version>
+      <version>1.8.0</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>core.incubator</artifactId>
-      <version>0.1.3</version>
+      <version>0.1.4</version>
     </dependency>
     <dependency>
       <groupId>criterium</groupId>
@@ -126,7 +111,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>data.int-map</artifactId>
-      <version>0.2.0</version>
+      <version>0.2.4</version>
     </dependency>
     <dependency>
       <groupId>me.raynes</groupId>
@@ -136,7 +121,7 @@
     <dependency>
       <groupId>clj-time</groupId>
       <artifactId>clj-time</artifactId>
-      <version>0.10.0</version>
+      <version>0.13.0</version>
     </dependency>
     <dependency>
       <groupId>smee</groupId>
@@ -144,14 +129,9 @@
       <version>0.5.1</version>
     </dependency>
     <dependency>
-      <groupId>net.mikera</groupId>
-      <artifactId>core.matrix</artifactId>
-      <version>0.49.0</version>
-    </dependency>
-    <dependency>
       <groupId>potemkin</groupId>
       <artifactId>potemkin</artifactId>
-      <version>0.3.13</version>
+      <version>0.4.3</version>
     </dependency>
   </dependencies>
 </project>

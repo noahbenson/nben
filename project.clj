@@ -43,6 +43,4 @@
   :jar-exclusions [#"(?:^|/).svn/"]
   ;; And some options for the REPL...
   :repl-options {:init (do (refer-clojure :exclude '[* - + == / < <= > >= not= = min max])
-                           (require '[clojure.core.matrix :refer :all]
-                                    '[clojure.core.matrix.operators :refer :all])
                            (use '[nben util sys]))})

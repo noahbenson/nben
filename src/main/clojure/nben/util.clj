@@ -48,7 +48,7 @@
 
 ;; --> string ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (import-vars [clojure.string capitalize lower-case re-quote-replacement split-lines trim
-                             trim-newline triml trimr upper-case])
+                             trim-newline triml trimr upper-case ends-with? starts-with?])
 (import-fn clojure.string/blank?        whitespace?)
 (import-fn clojure.string/escape        string-escape)
 (import-fn clojure.string/join          string-join)

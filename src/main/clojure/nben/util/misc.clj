@@ -42,3 +42,18 @@
   `(potemkin/import-vars [~namespace ~@(filter (comp filt clojure.core/name)
                                                (map key (ns-publics (the-ns namespace))))])))
 
+;; #string-drop ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn string-drop
+  "
+  (string-drop s i) drops the i'th character from the string s.
+  (string-drop s i j) drops the substring from i to j in string s.
+  "
+  ([s i]   (str (subs s 0 (dec i)) (subs s i)))
+  ([s i j] (str (subs s 0 (dec i)) (subs s j))))
+
+;; #string-insert ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn string-insert
+  "(string-insert s i t) inserts the string t starting at position i."
+  [s i t]   (str (subs s 0 i) t (subs s i)))
+
+

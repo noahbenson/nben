@@ -48,7 +48,7 @@
   (string-drop s i) drops the i'th character from the string s.
   (string-drop s i j) drops the substring from i to j in string s.
   "
-  ([s i]   (str (subs s 0 (dec i)) (subs s i)))
+  ([s i]   (str (subs s 0 i) (subs s (inc i))))
   ([s i j] (str (subs s 0 (dec i)) (subs s j))))
 
 ;; #string-insert ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

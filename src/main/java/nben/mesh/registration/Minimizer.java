@@ -366,7 +366,7 @@ public class Minimizer {
     *  @return a Report object detailing the minimization trajectory
     */
    synchronized public Report step(double deltaPE, int maxSteps, double z) throws Exception {
-      double t, t0, dt, dx, pe, pe0, petry, maxNorm;
+      double t, t0, dt, dx, pe, pe0, petry, maxNorm, glen, glen0;
       int k = 0;
       if (deltaPE <= 0 || maxSteps < 1) return null;
       if (z <= 0) throw new IllegalArgumentException("parameter z to step must be > 0");
@@ -391,7 +391,9 @@ public class Minimizer {
       // okay, iteratively take appropriately-sized steps...
       t = 0;
       pe0 = val.potential;
+      glen0 = val.gradientLength;
       pe = pe0;
+      glen = glen0;
       petry = pe;
       Report re = new Report(pe0);
       try {
@@ -424,7 +426,8 @@ public class Minimizer {
                // see if this was a valid step...
                if (Double.isNaN(valTmp.potential)) {
                   throw new IllegalStateException("Potential function yielded NaN");
-               } else if (Double.isInfinite(valTmp.potential) || valTmp.potential >= pe) {
+               } else if (Double.isInfinite(valTmp.potential)
+                          || valTmp.potential >= pe || valTmp.gradientLength >= glen) {
                   // we broke a triangle or we failed to reduce potential (perhaps due to a 
                   // too-large step-size); swap x0 back to x and grad0 back to grad and try with a
                   // smaller step
@@ -452,6 +455,7 @@ public class Minimizer {
                   // update the time, total distance, and potential
                   t += dt;
                   pe = val.potential;
+                  glen = val.gradientLength;
                   petry = pe;
                }
             }

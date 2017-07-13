@@ -210,6 +210,210 @@ public final class Fields {
          return new EdgePotential(new LennardJonesFunction(1.0 / E[0].length), E, X);
    }
 
+   /** Fields.newWellEdgePotential(s, q, mn, mx, T, X) yields an EdgePotential object with an
+    *  InfiniteWellFunction form using scale parameter s/m, shape parameter q, min value mn, and max
+    *  value mx, where where m is the number of angles (triangles times 3).
+    *
+    *  @param scale the scale of the infinite well function form (default: 1.0)
+    *  @param shape the shape of the infinite well function form (default: 0.5)
+    *  @param min the minimum value the angle can take (default: 0.0)
+    *  @param min the maximum value the angle can take (default: Pi/2)
+    *  @param T the matrix of triangles (note: this is converted to edges automatically)
+    *  @param X the reference coordinates for the potential field
+    *  @return a new EdgePotential object with the given parameters
+    */
+   public static EdgePotential newWellEdgePotential(double[] scale, double[] shape,
+                                                    double[] min, double[] max,
+                                                    int[][] T, double[][] X) {
+      if (T.length == 3)
+         return newWellEdgePotential(scale, shape, min, max, Util.facesToEdges(T), X);
+      InfiniteWellFunction[] fs = new InfiniteWellFunction[scale.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new InfiniteWellFunction(scale[i] / (scale.length), min[i], max[i], shape[i]);
+      return new EdgePotential(fs, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, double[] shape,
+                                                      double[] min, double max,
+                                                      int[][] T, double[][] X) {
+      if (T.length == 3)
+         return newWellEdgePotential(scale, shape, min, max, Util.facesToEdges(T), X);
+      InfiniteWellFunction[] fs = new InfiniteWellFunction[scale.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new InfiniteWellFunction(scale[i] / (scale.length), min[i], max, shape[i]);
+      return new EdgePotential(fs, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, double[] shape,
+                                                      double[] min, Double max,
+                                                      int[][] T, double[][] X) {
+      return newWellEdgePotential(scale, shape, min, max.doubleValue(), T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, double[] shape,
+                                                      double min, double[] max,
+                                                      int[][] T, double[][] X) {
+      if (T.length == 3)
+         return newWellEdgePotential(scale, shape, min, max, Util.facesToEdges(T), X);
+      InfiniteWellFunction[] fs = new InfiniteWellFunction[scale.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new InfiniteWellFunction(scale[i] / (scale.length), min, max[i], shape[i]);
+      return new EdgePotential(fs, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, double[] shape,
+                                                      Double min, double[] max,
+                                                      int[][] T, double[][] X) {
+      return newWellEdgePotential(scale, shape, min.doubleValue(), max, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, double[] shape,
+                                                      double min, double max,
+                                                      int[][] T, double[][] X) {
+      if (T.length == 3)
+         return newWellEdgePotential(scale, shape, min, max, Util.facesToEdges(T), X);
+      InfiniteWellFunction[] fs = new InfiniteWellFunction[scale.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new InfiniteWellFunction(scale[i] / (scale.length), min, max, shape[i]);
+      return new EdgePotential(fs, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, double[] shape,
+                                                      Double min, Double max,
+                                                      int[][] T, double[][] X) {
+      return newWellEdgePotential(scale, shape, min.doubleValue(), max.doubleValue(), T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, double shape,
+                                                      double[] min, double[] max,
+                                                      int[][] T, double[][] X) {
+      if (T.length == 3)
+         return newWellEdgePotential(scale, shape, min, max, Util.facesToEdges(T), X);
+      InfiniteWellFunction[] fs = new InfiniteWellFunction[scale.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new InfiniteWellFunction(scale[i] / (scale.length), min[i], max[i], shape);
+      return new EdgePotential(fs, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, Double shape,
+                                                    double[] min, double[] max,
+                                                    int[][] T, double[][] X) {
+      return newWellEdgePotential(scale, shape.doubleValue(), min, max, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, double shape,
+                                                    double[] min, double max,
+                                                    int[][] T, double[][] X) {
+      if (T.length == 3)
+         return newWellEdgePotential(scale, shape, min, max, Util.facesToEdges(T), X);
+      InfiniteWellFunction[] fs = new InfiniteWellFunction[scale.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new InfiniteWellFunction(scale[i] / (scale.length), min[i], max, shape);
+      return new EdgePotential(fs, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, Double shape,
+                                                    double[] min, Double max,
+                                                    int[][] T, double[][] X) {
+      return newWellEdgePotential(scale, shape.doubleValue(), min, max.doubleValue(), T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, double shape,
+                                                    double min, double[] max,
+                                                    int[][] T, double[][] X) {
+      if (T.length == 3)
+         return newWellEdgePotential(scale, shape, min, max, Util.facesToEdges(T), X);
+      InfiniteWellFunction[] fs = new InfiniteWellFunction[scale.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new InfiniteWellFunction(scale[i] / (scale.length), min, max[i], shape);
+      return new EdgePotential(fs, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, Double shape,
+                                                    Double min, double[] max,
+                                                    int[][] T, double[][] X) {
+      return newWellEdgePotential(scale, shape.doubleValue(), min.doubleValue(), max, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, double shape,
+                                                    double min, double max,
+                                                    int[][] T, double[][] X) {
+      if (T.length == 3)
+         return newWellEdgePotential(scale, shape, min, max, Util.facesToEdges(T), X);
+      InfiniteWellFunction[] fs = new InfiniteWellFunction[scale.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new InfiniteWellFunction(scale[i] / (scale.length), min, max, shape);
+      return new EdgePotential(fs, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double[] scale, Double shape,
+                                                    Double min, Double max,
+                                                    int[][] T, double[][] X) {
+      return newWellEdgePotential(scale, shape.doubleValue(), 
+                                  min.doubleValue(), max.doubleValue(), T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double scale, double[] shape,
+                                                    double[] min, double[] max,
+                                                    int[][] T, double[][] X) {
+      if (T.length == 3)
+         return newWellEdgePotential(scale, shape, min, max, Util.facesToEdges(T), X);
+      InfiniteWellFunction[] fs = new InfiniteWellFunction[shape.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new InfiniteWellFunction(scale / fs.length, min[i], max[i], shape[i]);
+      return new EdgePotential(fs, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(Double scale, double[] shape,
+                                                      double[] min, double[] max,
+                                                      int[][] T, double[][] X) {
+      return newWellEdgePotential(scale.doubleValue(), shape, min, max, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double scale, double[] shape,
+                                                    double[] min, double max,
+                                                    int[][] T, double[][] X) {
+      if (T.length == 3)
+         return newWellEdgePotential(scale, shape, min, max, Util.facesToEdges(T), X);
+      InfiniteWellFunction[] fs = new InfiniteWellFunction[shape.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new InfiniteWellFunction(scale / fs.length, min[i], max, shape[i]);
+      return new EdgePotential(fs, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(Double scale, double[] shape,
+                                                    double[] min, Double max,
+                                                    int[][] T, double[][] X) {
+      return newWellEdgePotential(scale.doubleValue(), shape, min, max.doubleValue(), T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double scale, double[] shape,
+                                                    double min, double[] max,
+                                                    int[][] T, double[][] X) {
+      if (T.length == 3)
+         return newWellEdgePotential(scale, shape, min, max, Util.facesToEdges(T), X);
+      InfiniteWellFunction[] fs = new InfiniteWellFunction[shape.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new InfiniteWellFunction(scale / fs.length, min, max[i], shape[i]);
+      return new EdgePotential(fs, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(Double scale, double[] shape,
+                                                    Double min, double[] max,
+                                                    int[][] T, double[][] X) {
+      return newWellEdgePotential(scale.doubleValue(), shape, min.doubleValue(), max, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double scale, double[] shape,
+                                                    double min, double max,
+                                                    int[][] T, double[][] X) {
+      if (T.length == 3)
+         return newWellEdgePotential(scale, shape, min, max, Util.facesToEdges(T), X);
+      InfiniteWellFunction[] fs = new InfiniteWellFunction[shape.length];
+      for (int i = 0; i < fs.length; ++i)
+         fs[i] = new InfiniteWellFunction(scale / fs.length, min, max, shape[i]);
+      return new EdgePotential(fs, T, X);
+   }
+   public static EdgePotential newWellEdgePotential(Double scale, double[] shape,
+                                                    Double min, Double max,
+                                                    int[][] T, double[][] X) {
+      return newWellEdgePotential(scale.doubleValue(), shape, 
+                                  min.doubleValue(), max.doubleValue(), T, X);
+   }
+   public static EdgePotential newWellEdgePotential(double scale, double shape,
+                                                    double min, double max,
+                                                    int[][] T, double[][] X) {
+      if (T.length == 3)
+         return newWellEdgePotential(scale, shape, min, max, Util.facesToEdges(T), X);
+      return new EdgePotential(new InfiniteWellFunction(scale / T[0].length, min, max, shape),
+                               T, X);
+   }
+   public static EdgePotential newWellEdgePotential(Double scale, Double shape,
+                                                    Double min, Double max,
+                                                    int[][] T, double[][] X) {
+      return newWellEdgePotential(scale.doubleValue(), shape.doubleValue(), 
+                                  min.doubleValue(), max.doubleValue(), T, X);
+   }
+   
    /** Fields.newHarmonicAnglePotential(s, q, T, X) yields an AnglePotential object with a
     *  HarmonicFunction form using scale parameter s/m and shape parameter q where where m is
     *  the number of angles (triangles times 3). Angle wells always have a center of Pi/4 and a 

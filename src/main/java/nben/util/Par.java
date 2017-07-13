@@ -28,6 +28,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ThreadFactory;
 
 import java.util.HashSet;
 import java.util.HashMap;
@@ -58,6 +59,24 @@ public final class Par {
    // Data about how to optimally multi-thread
    private static ExecutorService m_pool;
    private static int m_nthreads;
+   private static ThreadLocal<Boolean> m_is_worker;
+   // These simple classes ensure that new threads are marked as workers
+   private static final class ParRunnable implements Runnable {
+      private Runnable runnable;
+      public ParRunnable(Runnable r) {
+         runnable = r;
+      }
+      public void run() {
+         m_is_worker.set(Boolean.TRUE);
+         runnable.run();
+      }
+   }
+   private static final class ParThreadFactory implements ThreadFactory {
+      public Thread newThread(Runnable r) {
+         return new Thread(new ParRunnable(r));
+      }
+   }
+   
    /** Par.pool() yields an ExecutorService with Par.worker() threads
     *
     *  @return an ExecutorService with Par.workers() active threads.
@@ -81,13 +100,23 @@ public final class Par {
          throw new IllegalArgumentException("number of workers must be > 0");
       m_nthreads = n;
       m_pool.shutdown();
-      m_pool = Executors.newFixedThreadPool(n);
+      m_pool = Executors.newFixedThreadPool(n, new ParThreadFactory());
+   }
+   /** Par.isWorker() yields true if the current thread is a worker and false if not.
+    */
+   public static final boolean isWorker() {
+      return m_is_worker.get().booleanValue();
    }
    static {
       m_nthreads = Runtime.getRuntime().availableProcessors();
-      m_pool = Executors.newFixedThreadPool(m_nthreads);
+      m_pool = Executors.newFixedThreadPool(m_nthreads, new ParThreadFactory());
+      m_is_worker = new ThreadLocal<Boolean>() {
+            @Override protected Boolean initialValue() {
+               return Boolean.FALSE;
+            }
+         };
    }
-
+   
    /** Par.run(rs) runs the given set of Runnable workers over the threads of the Par class's
     *  executor service. In the case of error, an exception is thrown.
     *
@@ -106,8 +135,9 @@ public final class Par {
              RejectedExecutionException {
       if (rs == null) {
          throw new NullPointerException("Argument rs to Par.run is null"); 
-      } else if (rs.length == 1) {
-         rs[0].run();
+      } else if (rs.length == 1 || isWorker()) {
+         for (int i = 0; i < rs.length; ++i)
+            rs[i].run();
       } else if (rs.length > 0) {
          int i;
          ExecutorService exc = Par.pool();
@@ -132,7 +162,7 @@ public final class Par {
     *  @throws NullPointerException if rs or one of the elements of rs is null
     *  @throws RejectedExecutionException if one of the tasks cannot be scheduled for execution
     */
-   public final static <T> Object[] run(Callable<T>[] cs) 
+   public final static <T> T[] run(Callable<T>[] cs) 
       throws InterruptedException,
              ExecutionException, 
              CancellationException,
@@ -140,10 +170,11 @@ public final class Par {
              RejectedExecutionException {
       if (cs == null) {
          throw new NullPointerException("Argument cs to Par.run is null"); 
-      } else if (cs.length == 1) {
-         Object[] res = new Object[1];
+      } else if (cs.length == 1 || isWorker()) {
+         @SuppressWarnings("unchecked") T[] res = (T[]) new Object[cs.length];
          try {
-            res[0] = cs[0].call();
+            for (int i = 0; i < cs.length; ++i)
+               res[i] = cs[i].call();
          } catch (Exception e) {
             throw new ExecutionException("Exception while running single-threaded callable", e);
          }
@@ -152,7 +183,7 @@ public final class Par {
          int i;
          ExecutorService exc = Par.pool();
          @SuppressWarnings("unchecked") Future<T>[] fut = (Future<T>[]) new Future[cs.length];
-         Object[] res = new Object[cs.length];
+         @SuppressWarnings("unchecked") T[] res = (T[]) new Object[cs.length];
          for (i = 0; i < cs.length; ++i) {
             fut[i] = exc.submit(cs[i]);
          }
@@ -161,7 +192,8 @@ public final class Par {
          }
          return res;
       } else {
-         return new Object[0];
+         @SuppressWarnings("unchecked") T[] res = (T[]) new Object[0];
+         return res;
       }
    }
    /** Par.run(cs, res) runs the given set of Callable workers over the threads of the Par class's
@@ -187,16 +219,22 @@ public final class Par {
              CancellationException,
              NullPointerException, 
              RejectedExecutionException,
-             IllegalArgumentException {
-      if (cs == null) {
+             IllegalArgumentException,
+             Exception {
+      if (cs == null)
          throw new NullPointerException("Argument cs to Par.run is null");
+      if (res == null)
+         res = (T[]) new Object[cs.length];
+      if (res.length < cs.length)
+         throw new IllegalArgumentException("Argument res to Par.run is shorter than cs");
+      if (cs.length == 1 || isWorker()) {
+         for (int i = 0; i < cs.length; ++i)
+            res[i] = cs[i].call();
+         return res;
       } else if (cs.length > 0) {
          int i;
          ExecutorService exc = Par.pool();
          Future<T>[] fut = (Future<T>[]) new Future[cs.length];
-         if (res == null) res = (T[]) new Object[cs.length];
-         if (res.length < cs.length)
-            throw new IllegalArgumentException("Argument res to Par.run is shorter than cs");
          for (i = 0; i < cs.length; ++i) {
             fut[i] = exc.submit(cs[i]);
          }

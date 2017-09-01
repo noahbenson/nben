@@ -62,15 +62,13 @@ public final class HarmonicLogFunction implements IDifferentiatedFunction {
       x /= x0;
       if (!Num.positive(x)) return Double.POSITIVE_INFINITY;
       x = Math.log(x);
-      if (q == 2.0)
-         return (s/q)*x*x;
-      else
-         return s/q * Math.pow(Math.abs(x), q);
+      if (q == 2.0) return (s/q)*x*x;
+      else          return s/q * Math.pow(Math.abs(x), q);
    }
 
    /** HarmonicLogFunction.dy(x, x0, s, q) yields the derivative of the harmonic potential y in
     *  terms of the value x given the zero-point x0, the scale s, and the shape q. The formula for
-    *  the derivative is dy/dx = sgn(x/x0) s * |x-x0|^(q - 1).
+    *  the derivative is dy/dx = sgn(x/x0) s * |x/x0|^(q - 1).
     *
     *  @param x the value at which to calculate the potential
     *  @param s the scale of the harmonic potential function
@@ -79,12 +77,9 @@ public final class HarmonicLogFunction implements IDifferentiatedFunction {
    static public double dy(double x, double x0, double s, double q) {
       if (Num.zeroish(x0)) return Double.POSITIVE_INFINITY;
       double x_x0 = x / x0;
-      if (!Num.positive(x_x0))
-         return Double.POSITIVE_INFINITY;
-      if (q == 2.0)
-         return s/x * Math.log(x_x0);
-      else
-         return s/x * Math.pow(Math.abs(Math.log(x_x0)), q - 1.0);
+      if (!Num.positive(x_x0)) return Double.POSITIVE_INFINITY;
+      if (q == 2.0)            return s/x * Math.log(x_x0);
+      else                     return s/x * Math.pow(Math.abs(Math.log(x_x0)), q - 1.0);
    }
 
    // The IDifferentiatedFunction's

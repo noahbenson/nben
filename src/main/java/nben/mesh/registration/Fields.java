@@ -28,6 +28,7 @@ import nben.mesh.registration.AnglePotential;
 import nben.mesh.registration.MeshPotential;
 
 import nben.mesh.registration.HarmonicFunction;
+import nben.mesh.registration.HarmonicLogFunction;
 import nben.mesh.registration.GaussianFunction;
 import nben.mesh.registration.LennardJonesFunction;
 import nben.mesh.registration.InfiniteWellFunction;
@@ -126,6 +127,94 @@ public final class Fields {
          return newHarmonicEdgePotential(Util.facesToEdges(E), X);
       else
          return new EdgePotential(new HarmonicFunction(1.0 / E[0].length), E, X);
+   }
+
+   /** Fields.newHarmonicLogEdgePotential(s, q, E, X) yields an EdgePotential object with a 
+    *  HarmonicLogFunction form using scale parameter s/m and shape parameter q where where m is the
+    *  number of edges. If the parameter E is actually a list of faces, it is interpreted 
+    *  automatically.
+    *
+    *  @param scale The scale or scales of the harmonic function forms (default: 1.0)
+    *  @param shape The shape or shapes of the harmonic function forms (default: 2.0)
+    *  @params E the edge or face matrix (must be 2 or 3 x m; m is the number of edges or faces)
+    *  @params X the reference coordinates for the potential field
+    *  @return a new EdgePotential object with the given parameters
+    */
+   public static EdgePotential newHarmonicLogEdgePotential(double[] scale, double[] shape,
+                                                           int[][] E, double[][] X) {
+      if (E.length == 3)
+         return newHarmonicLogEdgePotential(scale, shape, Util.facesToEdges(E), X);
+      int n = scale.length;
+      HarmonicLogFunction[] fs = new HarmonicLogFunction[n];
+      for (int i = 0; i < n; ++i)
+         fs[i] = new HarmonicLogFunction(scale[i] / n, shape[i]);
+      return new EdgePotential(fs, E, X);
+   }
+   public static EdgePotential newHarmonicLogEdgePotential(double[] scale, double shape,
+                                                           int[][] E, double[][] X) {
+      if (E.length == 3)
+         return newHarmonicLogEdgePotential(scale, shape, Util.facesToEdges(E), X);
+      int n = scale.length;
+      HarmonicLogFunction[] fs = new HarmonicLogFunction[n];
+      for (int i = 0; i < n; ++i)
+         fs[i] = new HarmonicLogFunction(scale[i] / n, shape);
+      return new EdgePotential(fs, E, X);
+   }
+   public static EdgePotential newHarmonicLogEdgePotential(double[] scale, Double shape,
+                                                           int[][] E, double[][] X) {
+      return newHarmonicLogEdgePotential(scale, shape.doubleValue(), E, X);
+   }
+   public static EdgePotential newHarmonicLogEdgePotential(double scale, double[] shape,
+                                                           int[][] E, double[][] X) {
+      if (E.length == 3)
+         return newHarmonicLogEdgePotential(scale, shape, Util.facesToEdges(E), X);
+      int n = shape.length;
+      HarmonicLogFunction[] fs = new HarmonicLogFunction[n];
+      for (int i = 0; i < n; ++i)
+         fs[i] = new HarmonicLogFunction(scale / n, shape[i]);
+      return new EdgePotential(fs, E, X);
+   }
+   public static EdgePotential newHarmonicLogEdgePotential(Double scale, double[] shape,
+                                                           int[][] E, double[][] X) {
+      return newHarmonicLogEdgePotential(scale.doubleValue(), shape, E, X);
+   }
+   public static EdgePotential newHarmonicLogEdgePotential(double[] scale, 
+                                                           int[][] E, double[][] X) {
+      if (E.length == 3)
+         return newHarmonicLogEdgePotential(scale, 2.0, Util.facesToEdges(E), X);
+      int n = scale.length;
+      HarmonicLogFunction[] fs = new HarmonicLogFunction[n];
+      for (int i = 0; i < n; ++i)
+         fs[i] = new HarmonicLogFunction(scale[i] / n, 2.0);
+      return new EdgePotential(fs, E, X);
+   }
+   public static EdgePotential newHarmonicLogEdgePotential(double scale, double shape,
+                                                           int[][] E, double[][] X) {
+      if (E.length == 3) {
+         int[][] tmp = Util.facesToEdges(E);
+         return newHarmonicLogEdgePotential(scale, shape, tmp, X);
+      } else
+         return new EdgePotential(new HarmonicLogFunction(scale / E[0].length, shape), E, X);
+   }
+   public static EdgePotential newHarmonicLogEdgePotential(Double scale, Double shape,
+                                                           int[][] E, double[][] X) {
+      return newHarmonicLogEdgePotential(scale.doubleValue(), shape.doubleValue(), E, X);
+   }
+   public static EdgePotential newHarmonicLogEdgePotential(double scale, int[][] E, double[][] X) {
+      if (E.length == 3) {
+         int[][] tmp = Util.facesToEdges(E);
+         return newHarmonicLogEdgePotential(scale, tmp, X);
+      } else
+         return new EdgePotential(new HarmonicLogFunction(scale / E[0].length), E, X);
+   }
+   public static EdgePotential newHarmonicLogEdgePotential(Double scale, int[][] E, double[][] X) {
+      return newHarmonicLogEdgePotential(scale.doubleValue(), E, X);
+   }
+   public static EdgePotential newHarmonicLogEdgePotential(int[][] E, double[][] X) {
+      if (E.length == 3)
+         return newHarmonicLogEdgePotential(Util.facesToEdges(E), X);
+      else
+         return new EdgePotential(new HarmonicLogFunction(1.0 / E[0].length), E, X);
    }
 
    /** Fields.newLJEdgePotential(s, q, E, X) yields an EdgePotential object with a 
@@ -531,6 +620,75 @@ public final class Fields {
                                 Util.facesToAngles(T), X);
    }
 
+   /** Fields.newHarmonicLogAnglePotential(s, q, T, X) yields an AnglePotential object with a
+    *  HarmonicLogFunction form using scale parameter s/m and shape parameter q where where m is
+    *  the number of angles (triangles times 3). Angle wells always have a center of Pi/4 and a 
+    *  width of Pi/4.
+    *
+    *  @param scale the scale of the harmonic function form (default: 1.0)
+    *  @param shape the shape of the harmonic function form (default: 2.0)
+    *  @param T the matrix of triangles (note: this is converted to angles automatically)
+    *  @param X the reference coordinates for the potential field
+    *  @return a new AnglePotential object with the given parameters
+    */
+   public static AnglePotential newHarmonicLogAnglePotential(double[] scale, double[] shape,
+                                                             int[][] T, double[][] X) {
+      HarmonicLogFunction[] fs = new HarmonicLogFunction[scale.length];
+      for (int i = 0; i < scale.length; ++i)
+         fs[i] = new HarmonicLogFunction(scale[i] / (3 * T[0].length), shape[i]);
+      return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newHarmonicLogAnglePotential(double[] scale, double shape,
+                                                             int[][] T, double[][] X) {
+      HarmonicLogFunction[] fs = new HarmonicLogFunction[scale.length];
+      for (int i = 0; i < scale.length; ++i)
+         fs[i] = new HarmonicLogFunction(scale[i] / (3 * T[0].length), shape);
+      return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newHarmonicLogAnglePotential(double[] scale, Double shape,
+                                                             int[][] T, double[][] X) {
+      return newHarmonicLogAnglePotential(scale, shape.doubleValue(), T, X);
+   }
+   public static AnglePotential newHarmonicLogAnglePotential(double scale, double[] shape,
+                                                             int[][] T, double[][] X) {
+      HarmonicLogFunction[] fs = new HarmonicLogFunction[shape.length];
+      for (int i = 0; i < shape.length; ++i)
+         fs[i] = new HarmonicLogFunction(scale / (3 * T[0].length), shape[i]);
+      return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newHarmonicLogAnglePotential(Double scale, double[] shape,
+                                                             int[][] T, double[][] X) {
+      return newHarmonicLogAnglePotential(scale.doubleValue(), shape, T, X);
+   }
+   public static AnglePotential newHarmonicLogAnglePotential(double[] scale,
+                                                             int[][] T, double[][] X) {
+      HarmonicLogFunction[] fs = new HarmonicLogFunction[scale.length];
+      for (int i = 0; i < scale.length; ++i)
+         fs[i] = new HarmonicLogFunction(scale[i] / (3 * T[0].length));
+      return new AnglePotential(Util.faceFunctionsToAngleFunctions(fs), Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newHarmonicLogAnglePotential(double scale, double shape,
+                                                             int[][] T, double[][] X) {
+      return new AnglePotential(new HarmonicLogFunction(scale / (3.0 * T[0].length), shape), 
+                                Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newHarmonicLogAnglePotential(Double scale, Double shape,
+                                                             int[][] T, double[][] X) {
+      return newHarmonicLogAnglePotential(scale.doubleValue(), shape.doubleValue(), T, X);
+   }
+   public static AnglePotential newHarmonicLogAnglePotential(double scale,
+                                                             int[][] T, double[][] X) {
+      return new AnglePotential(new HarmonicLogFunction(scale / (3.0 * T[0].length)), 
+                                Util.facesToAngles(T), X);
+   }
+   public static AnglePotential newHarmonicLogAnglePotential(Double scale, int[][] T, double[][] X) {
+      return newHarmonicLogAnglePotential(scale.doubleValue(), T, X);
+   }
+   public static AnglePotential newHarmonicLogAnglePotential(int[][] T, double[][] X) {
+      return new AnglePotential(new HarmonicLogFunction(1.0 / (3.0 * T[0].length)), 
+                                Util.facesToAngles(T), X);
+   }
+   
    /** Fields.newLJAnglePotential(s, q, T, X) yields an AnglePotential object with a
     *  LennardJonesFunction form using scale parameter s/m and shape parameter q where where m is
     *  the number of angles (triangles times 3). Angle wells always have a center of Pi/4 and a 

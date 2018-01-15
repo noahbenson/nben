@@ -686,7 +686,7 @@ public class Minimizer {
     */
    synchronized public Report randomStep(double deltaPE, int maxSteps, double z, boolean inv)
       throws Exception {
-      double t, t0, pe, pe0, petry, maxNorm, tot;
+      double t, t0, pe, pe0, petry, maxNorm, tot, z0, zorig = z;
       int k = 0, ii;
       Random rand = ThreadLocalRandom.current();
       if (deltaPE <= 0 || maxSteps < 1) return null;
@@ -723,6 +723,7 @@ public class Minimizer {
                //throw new Exception("gradient is effectively 0");
                break;
             }
+            if (Num.zeroish(z)) z = zorig;
             // pick our start step size
             tot = 0.0;
             for (ii = 0; ii < dt.length; ++ii) {
@@ -735,6 +736,7 @@ public class Minimizer {
                   dt[ii] = Math.log(1.0 - rand.nextDouble()) * (-z/norms[ii]);
                tot += dt[ii];
             }
+            z0 = z;
             t0 = t;
             // see if the current step-size works; if not we'll halve it and try again...
             while (t0 == t) {
@@ -745,6 +747,7 @@ public class Minimizer {
                      // flat, within our numerical ability to measure it;
                      // if we just break out here, we should get new dt's and this may allow us
                      // to progress. Count it as a step, however.
+                     z *= 2.0;
                      ++k;
                      break;
                   } else
@@ -768,6 +771,7 @@ public class Minimizer {
                      dt[ii] *= 0.5;
                      tot += dt[ii];
                   }
+                  z *= 0.5;
                   // we want to save petry here; this is so that, if we get dt to 0 and petry is
                   // actually equal to pe, we know that we've actually reached a point at which the
                   // potential is effectively flat
@@ -791,6 +795,7 @@ public class Minimizer {
                   t += z;
                   pe = val.potential;
                   petry = pe;
+                  z = 0.75*z0 + 0.25*z;
                }
             }
          }

@@ -56,4 +56,17 @@
   "(string-insert s i t) inserts the string t starting at position i."
   [s i t]   (str (subs s 0 i) t (subs s i)))
 
+;; utility functions that are occasionally useful
+(def constantly-true      (constantly true))
+(def constantly-false     (constantly false))
+(def constantly-nil       (constantly nil))
+(def constantly-1         (constantly 1))
+(def constantly-0         (constantly 0))
+(def constantly-empty-set (constantly #{}))
+(def constantly-empty-map (constantly {}))
+(def constantly-empty-vec (constantly []))
+(defn yield-first-argument [arg & more] arg)
+(defn yield-last-argument  [& args] (last args))
+
+
 

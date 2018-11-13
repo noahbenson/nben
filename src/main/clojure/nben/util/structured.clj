@@ -40,6 +40,13 @@
   [m]
   (instance? clojure.lang.IRef m))
 
+;; #atom? ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn atom?
+  "
+  (atom? x) yields true if x is of type clojure.lang.Atom and false otherwise.
+  "
+  [x] (instance? clojure.lang.Atom x))
+
 ;; #agent? ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn agent?
   "(agent? r) yields true if r is an instance of clojure.lang.Agent and false otherwise."
@@ -52,3 +59,20 @@
   [u]
   (instance? clojure.lang.Named u))
 
+;; #derefable? ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn derefable?
+  "
+  (derefable? obj) yields true if obj is a type that can be safely dereferenced (i.e., a promise,
+    ref, agent, delay, atom, or future).
+  "
+  [obj]
+  (instance? clojure.lang.IDeref obj))
+
+;; #transient? ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn transient?
+  "
+  (transient? x) yields true if x is an instance of the ITransientCollection interface and false
+    otherwise.
+  "
+  [x]
+  (instance? clojure.lang.ITransientCollection x))

@@ -1,5 +1,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; error.clj, part of nben, a mathematics library for the JVM.
+;; typedef.clj, part of nben, a mathematics library for the JVM.
 ;; This namespace adds to potemkin's dev-map-type a def-vec-type and dev-set-type.
 ;; 
 ;; Copyright (C) 2016 Noah C. Benson
@@ -140,9 +140,7 @@
                (not= (.count self#) (count obj#)) false
                :else (every? #(.contains self# %) (seq obj#))))
        ~(or (get fns 'hashCode)
-            `(hashCode [self#] (reduce #(+ (* 31 %1) (if (nil? %2) 0 (.hashCode %2)))
-                                       1
-                                       (.seq self#))))
+            `(hashCode [self#] (apply + (map #(clojure.lang.Util/hash %) (.seq self#)))))
        ~(or (get fns 'toString)
             `(toString [self#] (clojure.lang.RT/printString self#)))
 
@@ -377,27 +375,25 @@
   [protocol-name & args]
   (let [[docstr triage-fn impl-fn & methods] (if (string? (first args)) args (cons nil args))
         triage-sym (gensym)]
-    `(let [triage-fn# ~triage-fn
-           impl-fn#   ~impl-fn]
-       (defprotocol ~protocol-name
-         ~@(when docstr [docstr])
-         ~@methods)
-       (letfn [(~triage-sym [obj# fn-name# args#]
-                 (if (identical? (class obj#) Object)
-                   (if-let [objfns# (impl-fn# Object)]
-                     (apply (fn-name# objfns#) obj# args#)
-                     (arg-err "multi-pro protocol " ~protocol-name
-                              " not implemented for class Object"))
-                   (if-let [impl-map# (impl-fn# (triage-fn# obj#))]
-                     (do (extend (class obj#) ~protocol-name impl-map#)
-                         (apply (get impl-map# fn-name#) obj# args#))
-                     (arg-err "multi-pro protocol " ~protocol-name
-                              " not implemented for class " (class obj#)))))]
-         (extend Object
-           ~protocol-name
-           ~(reduce (fn [m mth]
-                      (let [nm (keyword (first mth))]
-                        (assoc m nm `(fn [obj# & more#] (~triage-sym obj# ~nm more#)))))
-                    {}
-                    methods))))))
-
+    `(do (defprotocol ~protocol-name
+           ~@(when docstr [docstr])
+           ~@methods)
+         (let [triage-fn# ~triage-fn, impl-fn# ~impl-fn]
+           (letfn [(~triage-sym [obj# fn-name# args#]
+                    (if (identical? (class obj#) Object)
+                      (if-let [objfns# (impl-fn# Object)]
+                        (apply (fn-name# objfns#) obj# args#)
+                        (arg-err "multi-pro protocol " ~protocol-name
+                                 " not implemented for class Object"))
+                      (if-let [impl-map# (impl-fn# (triage-fn# obj#))]
+                        (do (extend (class obj#) ~protocol-name impl-map#)
+                            (apply (get impl-map# fn-name#) obj# args#))
+                        (arg-err "multi-pro protocol " ~protocol-name
+                                 " not implemented for class " (class obj#)))))]
+             (extend Object
+               ~protocol-name
+               ~(reduce (fn [m mth]
+                          (let [nm (keyword (first mth))]
+                            (assoc m nm `(fn [obj# & more#] (~triage-sym obj# ~nm more#)))))
+                        {}
+                        methods)))))))

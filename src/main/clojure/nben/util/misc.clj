@@ -68,5 +68,58 @@
 (defn yield-first-argument [arg & more] arg)
 (defn yield-last-argument  [& args] (last args))
 
+;; #most ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn most
+  "
+  (most x) is equivalent to (butlast x) with the following exceptions:
+    * If x is a non-empty vector, yields (pop x)
+    * If x is a non-empty set or map, equivalent to (dissoc x (last x)) or (disj x (last x))--i.e.,
+      it yields an object of the same type as x.
+    * If x is a list or other seq'able item, this is equivalent to (butlast x) except that it yields
+      a lazy seq instead of a realized seq.
+    * Note that (most [y]) yields [], (most {a b}) yields {}, and (most #{y}) yields #{}; otherwise,
+        if x has only one element and is neither a vector, map, or set (therefore must be a seqable
+        object) nil is yielded.
+  "
+  [x]
+  (cond (empty? x)  nil
+        (vector? x) (pop x)
+        (map? x)    (dissoc x (last (keys x)))
+        (set? x)    (disj x (last x))
+        :else       (let [x (seq x), fx (first x), nx (next x)]
+                      (when nx (lazy-seq (cons fx (most nx)))))))
 
+;; #most-last ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn most-last
+  "
+  (most-last x) is equivalent to [(most x) (last x)] except  that it is never lazy. If x is empty,
+    yields nil.
+  "
+  [x]
+  (cond (empty? x)  nil
+        (vector? x) [(pop x) (last x)]
+        (map? x)    (let [l (last x)] [(dissoc x (key l)) l])
+        (set? x)    (let [l (last x)] [(disj x l) l])
+        :else       (when-let [x (seq x)]
+                      (let [v (volatile! nil)]
+                        (letfn [(op [x] (let [fx (first x), x (next x)]
+                                          (if x
+                                            (lazy-seq (cons fx (op x)))
+                                            (do (vreset! v fx) nil))))]
+                          (let [x (op (seq x))]
+                            (doall x)
+                            [x @v]))))))
 
+;; #>> ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn >>
+  "
+  (>> f x) is equivalent to (f x).
+  (>> f g x) is equivalent to (f (g x)).
+  (>> f g h... x) is equivalent to ((comp f g h...) x).
+  (>> [f g h...] x y z...) is equivalent to ((comp f g h...) x y z...).
+  "
+  ([f1 f2 & more]
+   (cond (or (seq? f1) (vector? f1)) (apply (apply comp f1) (cons f2 more))
+         (empty? more)               (f1 f2)
+         :else                       (let [[f x] (most-last (list* f1 f2 more)), f (apply comp f)]
+                                       (f x)))))

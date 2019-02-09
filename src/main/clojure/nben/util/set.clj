@@ -21,6 +21,7 @@
 
 (ns nben.util.set
   (:use nben.util.error)
+  (:use nben.util.misc)
   (:use nben.util.typedef))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -82,8 +83,8 @@
      ise used). If map is neither of these, then nil is yielded. The object returned is of type
      MapKeySet or of type RangeSet."
   [map]
-  (cond (map? map) (->MapKeySet map)
-        (vector? map) (->RangeSet (count map))
+  (cond (map? map)    (->MapKeySet map)
+        (vector? map) (->RangeSet 0 (count map) 1 nil)
         :else nil))
 (defn entry-set
   "(entry-set map) yields a set of the entries in the given map. This is performed in constant time.
@@ -95,67 +96,62 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Set functions for fast intersection, union, etc.
 (defn set-isect
-  "(set-isect a b...) yields the intersection of all of the sets given. This function should be
-     faster than clojure's intersection function because it sorts the sets and performs the
-     intersection optimally."
+  "
+  (set-isect a b...) yields the intersection of all of the sets given. This function should be
+    faster than clojure's intersection function because it sorts the sets and performs the
+    intersection optimally.
+  "
   [& sets]
-  (let [sorted-sets (seq (sort-by count sets))]
-    (reduce (fn [smaller larger]
-              (loop [s (seq smaller), res smaller]
-                (if s
-                  (recur (next s)
-                         (if (contains? larger (first s)) res (disj res (first s))))
-                  res)))
-            (first sorted-sets)
-            (next sorted-sets))))
+  (cond (empty? sets) nil
+        (nil? (next sets)) (first sets)
+        :else (reduce
+               (fn [sm lg]
+                 (when-not (empty? sm)
+                   (persistent!
+                    (reduce disj! (transient sm) (filter (comp not (partial contains? lg)) sm)))))
+               (sort-by count sets))))
 
 (defn set-union
-  "(set-isect a b...) yields the intersection of all of the sets given. This function should be
-     faster than clojure's intersection function because it sorts the sets and performs the
-     intersection optimally."
+  "
+  (set-isect a b...) yields the intersection of all of the sets given. This function should be
+    faster than clojure's intersection function because it sorts the sets and performs the
+    intersection optimally.
+  "
   [& sets]
-  (let [sorted-sets (seq (sort-by count sets))]
-    (reduce (fn [smaller larger]
-              (loop [s (seq smaller), res larger]
-                (if s
-                  (recur (next s) (conj res (first s)))
-                  res)))
-            (first sorted-sets)
-            (next sorted-sets))))
+  (cond (empty? sets) nil
+        (nil? (next sets)) (first sets)
+        :else (let [sets (sort-by (comp - count) sets)]
+                (persistent! (reduce conj! (transient (first sets)) (apply concat (next sets)))))))
 
 (defn map-isect
   "(map-isect f a b...) yields the intersection of all of the maps (a, b...) given, using the value
      of (f u v) to determine the value of matching keys with values u and v. This function should be
      faster than clojure's merge function because it sorts the sets and performs the intersection
-     optimally.
-   (map-isect f) yields a curried function that "
+     optimally."
   [fun & maps]
   (let [sorted-maps (seq (sort-by count maps))]
     (reduce (fn [smaller larger]
-              (loop [s (seq smaller), res smaller]
+              (loop [s (seq smaller), res (transient smaller)]
                 (if s
                   (recur (next s)
-                         (let [[k v] (first s)
-                               lval (get larger k larger)]
+                         (let [[k v] (first s), lval (get larger k larger)]
                            (if (identical? larger lval)
-                             (dissoc res k)
-                             (assoc res k (fun v lval)))))
-                  res)))
-            (first sorted-maps)
-            (next sorted-maps))))
+                             (dissoc! res k)
+                             (assoc! res k (fun v lval)))))
+                  (persistent! res))))
+            sorted-maps)))
 
 (defn map-union [fun & maps]
   (let [sorted-maps (seq (sort-by count maps))]
     (reduce (fn [smaller larger]
-              (loop [s (seq smaller), res larger]
+              (loop [s (seq smaller), res (transient larger)]
                 (if s
-                  (let [[k v] (first s)
-                        lval (get res k res)]
+                  (let [[k v] (first s), lval (get res k res)]
                     (recur (next s)
                            (if (identical? res lval)
-                             (assoc res k v)
-                             (assoc res k (fun v lval)))))
-                  res)))
+                             (assoc! res k v)
+                             (assoc! res k (fun v lval)))))
+                  (persistent! res))))
             (first sorted-maps)
             (next sorted-maps))))
 
@@ -190,14 +186,13 @@
      to map-union."
   [& args]
   (when (not (empty? args))
-    (let [f (first args)
-          n (next args)]
-      (cond (map? f) (apply map-union (fn [x y] x) args)
-            (set? f) (apply set-union args)
-            (ifn? f) (if n
-                       (if (map? (first n)) (apply map-union args) (apply set-union n))
-                       (partial map-union f))
-            :else (apply set-union (map set args))))))
+    (let [f (first args), n (next args)]
+      (cond (map? f)         (apply map-union yield-first-argument args)
+            (set? f)         (apply set-union args)
+            (not (ifn? f))   (apply set-union (map set args))
+            (nil? n)         (partial map-union f)
+            (map? (first n)) (apply map-union args)
+            :else            (apply set-union n)))))
 
 (defn outer
   "(outer f args...) yields a lazy seq of the function f applied to the individual members
@@ -209,5 +204,3 @@
          (apply f s0 s))
        (map f coll0))))
 
-    
-  

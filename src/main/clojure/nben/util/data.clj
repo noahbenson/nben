@@ -22,7 +22,8 @@
   (:use [nben.util error])
   (:use [nben.util typedef])
   (:use [nben.util misc])
-  (:use [nben.util structured]))
+  (:use [nben.util structured])
+  (:require [clojure.string :refer [join] :rename {join string-join}]))
 
 ;; #PFreezable ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defmultipro PFreezable
@@ -218,7 +219,11 @@
       (if-not (and (identical? v vec-part) (identical? m map-part))
         (VecMap. (if (identical? v vec-part) vec-part (with-meta v (meta vec-part)))
                  (if (identical? m map-part) map-part (with-meta m (meta map-part))))
-        this))))
+        this)))
+  Object
+  (toString [_] (let [s1 (string-join " " (map str vec-part))
+                      s2 (string-join ", " (map (partial string-join " ") (seq map-part)))]
+                  (str "[" s1 " \\ " s2 "]"))))
 (defn seqmap?
   "
   (seqmap? u) yields true if u is a seqmap object and false otherwise.
@@ -486,7 +491,7 @@
            :dict-has? contains?
            :dict-seq  seq
            :dict-drop disj
-           :doct-add  conj}
+           :dict-add  conj}
    :ref   {:dict-set? (comp dict-set deref)
            :dict-has? #(dict-has? (deref %1) %2)
            :dict-seq  #(dict-seq (deref %1))
@@ -508,9 +513,9 @@
            :dict-add  #(dict-add (deref %1) %2)
            :dict-drop #(dict-drop (deref %1) %2)}
    :obj   {:dict-set? constantly-false
-           :dict-has? #(arg-err "object is not a dictionary set")
-           :dict-seq  #(arg-err "object is not a dictionary set")
-           :dict-drop #(arg-err "object is not a dictionary set")
+           :dict-has? =
+           :dict-seq  list
+           :dict-drop #(if (= %1 %2) #{} %1)
            :dict-add  #(-> #{%1 %2})}}
   (dict-set? [_] "
   (dict-set? d) yields true if the object d is a dict-set and false otherwise.
@@ -613,6 +618,233 @@
   (dict-lens-of [_ k nf] k)
   (dict-ldrop [_ k] (arg-err "Cannot drop from an all index")))
 
+;; #PPattern ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn- patt-conditions [obj]
+  "Given an object with meta-data, extracts a seq of conditions from that meta-data."
+  (when-let [m (meta obj)]
+    (filter #(let [k (key %)] (and (vector? k) (every? keyword? k)))
+            (seq m))))
+(defn- patt-params
+  "Given an object with meta-data, extracts pattern parameters from that meta-data."
+  [obj]
+  (loop [r (transient #{}), s (filter keyword? (apply concat (map first (patt-conditions obj))))]
+    (if s (recur (conj! r (first s)) (next s)) (persistent! r))))
+(defn- patt-allow
+  "Given an object with meta-data extracts the allowed pattern keys from that meta-data."
+  [obj]
+  (when-let [m (and (meta? obj) (meta obj))]
+    (when-let [a (get m :allow)]
+      (cond (coll? a)    (set a)
+            (= a :any)   :any
+            (= a :all)   :any
+            (= a :none)  nil
+            (keyword? a) #{a}
+            :else        (arg-err "Invalid :allow tag in pattern meta-data")))))
+(defn- patt-then
+  "Given an object with meta-data extracts the asserted pattern assignments from that meta-data."
+  [obj]
+  (when-let [m (and (meta? obj) (meta obj))]
+    (when-let [a (get m :then)]
+      (cond (map? a)     a
+            (= a :none)  nil
+            (coll? a)    (apply hash-map a)
+            :else        (arg-err "Invalid :then tag in pattern meta-data")))))
+(defn- pattget [d k]
+  (if-let [me (find d k)] (val me) (arg-err "condition requires " k " not matched in params")))
+(defn- patt-check
+  "
+  Given an object with meta-data and a parameter-map satisfying it, ensures that all conditions are
+  met for the pattern object.
+  "
+  [obj params]
+  (let [cs (patt-conditions obj), getf (partial pattget params)]
+    (if (empty? cs)
+      true
+      (loop [[[args f] & more] cs]
+        (cond (and f (not (apply f (map getf args)))) false
+              more                                    (recur more)
+              :else                                   true)))))
+(defn- match-merge
+  "
+  (match-merge a b) yields a merged version of maps a and b if for every key k in a associated
+    with a value v, the map b either does not contain the key k or the key k is associated with
+    value v in b also.
+  "
+  [a b]
+  (cond (empty? a) b
+        (empty? b) a
+        :else (let [[a b] (if (< (count a) (count b)) [a b] [b a])]
+                (loop [a (seq a), b (transient b)]
+                  (if-not a
+                    (persistent! b)
+                    (let [[k v] (first a), bv (get b k missing)]
+                      (cond (identical? bv missing) (recur (next a) (assoc! b k v))
+                            (= bv v)                (recur (next a) b)
+                            :else                   nil)))))))
+(defn- basic-join [a b]
+  (let [a (filter map? (seq a)), sb (filter map? (seq b))]
+    (when-not (and (empty? a) (empty? b))
+      (let [r (loop [q (first a), a (next a), b sb, r (transient #{})]
+                (cond b     (recur q a (next b)
+                                   (let [m (match-merge q (first b))] (if m (conj! r m) r)))
+                      a     (recur (first a) (next a) sb r)
+                      :else (persistent! r)))]
+        (when-not (empty? r) r)))))
+(defn- add-patt-meta [p2 p1] ;; from p1 to p2
+  (let [ps      (vec (patt-params p1))
+        [p2 m2] (cond (with-meta? p2) [p2 (meta p2)]
+                      (meta? p2)      [#{p2} (meta p2)]
+                      (empty? ps)     [p2 nil]
+                      :else           [#{p2} nil])
+        m2 (if (or (empty? ps) (contains? m2 ps)) m2 (assoc m2 ps nil))]
+    (if m2 (with-meta p2 m2) p2)))
+(declare match)
+(defn- dict-match [prow d]
+  (let [params (patt-params prow)
+        sats (cond
+               ;; if this is a dict-set, we match anything inside of it
+               (dict-set? d)
+               (apply concat (filter identity (map (partial match prow) (dict-seq d))))
+               ;; if prow is a dict-set, we need to find matches to all of its elements
+               (dict-set? prow)
+               (let [s (dict-seq prow)]
+                 (cond (empty? s)      #{{}}
+                       (nil? (next s)) (let [f (first s)]
+                                         (cond (contains? params f) #{{f d}}
+                                               (dict-row? f) (dict-match (add-patt-meta f prow) d)
+                                               :else (match f d)))
+                       :else (reduce basic-join
+                                     (map #(match (add-patt-meta % prow) d) (dict-seq prow)))))
+               ;; if d is a not a dict, (and prow is not a set), there can't be a match
+               (not (dict? d)) nil
+               ;; if empty, simple:
+               (empty? d) (when (and (empty? prow) (patt-check prow {})) #{{}})
+               ;; if this is a dict-row, we match keys plus meta-data instructions:
+               (dict-row? d)
+               (let [{allow :allow, sarg :then} (meta prow)
+                     allow (cond (or (not allow) (= allow :none)) constantly-false
+                                 (contains? #{:any :all} allow)   constantly-true
+                                 :else                            allow)
+                     sats (loop [ks (dict-keys d), sats nil]
+                            (if ks
+                              (let [[k & ks] ks, v (dict-get d k d), pv (dict-get prow k missing)]
+                                (cond
+                                  ;; could be missing from the pattern
+                                  (identical? pv missing) (when (allow k) (recur ks sats))
+                                  ;; could be that the pattern allows a wildcard
+                                  (contains? params pv) (recur ks (basic-join sats [{pv v}]))
+                                  ;; could be that they match... if not, no match here either...
+                                  :else (when-let [ms (match (add-patt-meta pv prow) v)]
+                                          (recur ks (basic-join sats ms)))))
+                              sats))]
+                 (when-not (empty? sats) sats))
+               ;; otherwise we don't match...
+               :else nil)
+        sarg (patt-then prow)]
+    (when-let [sats (filter (partial patt-check prow)
+                            (if sarg (map (partial basic-join [sarg]) sats) sats))]
+      (when-not (empty? sats) (set sats)))))
+(defmultipro PPattern
+  "
+  The PPattern protocol is extended by patterns and used in matching.
+  "
+  #(cond (nil? %) :obj, (map? %) :map, (set? %) :set, (vector? %) :vec, (seq? %) :seq, :else :obj)
+  {:map {:match dict-match}
+   :vec {:match dict-match}
+   :seq {:match dict-match}
+   :set {:match dict-match}
+   :obj {:match #(when (= %1 %2) #{{}})}}
+  (match [_ d] "
+  (match p d) yields a set of matches to the pattern p in the dictionary d. Each match is
+    represented as a map of parameters to matched values. If the set of matches is empty, nil is 
+    yielded. If the pattern has no parameters but there is a match, then the '({}) is yielded.
+  "))
+(defrecord ^:private Wildcard []
+  PPattern
+  (match [_ d] #{{}}))
+(def ??
+  "
+  ?? is a wildcard pattern; when used as a pattern, it matches against anything.
+  "
+  (Wildcard.))
+(def- patt-options [:allow :then])
+(defn patt
+  "
+  (patt form [p1 p2...] condition-fn) yields a patterm with the given form, the given set of
+    parameters [p1 p2...], and the given condition function (which must accept the arguments that
+    match the parameters, in the given order). It is recommended that the parameters be keywords.
+  (patt form [p1 p2...]) yields a pattern without an explicit condition.
+  (patt form) yields a pattern without parameters or a condition; note that this may be useful for
+    passing optional pattern settings.
+
+  Note that patterns are expressed in meta-data, thus the returned pattern is likely to be form or
+  a set containing form with additional meta-data.
+
+  The following optional arguments are accepted:
+    * :allow [keys] specifies that the pattern should allow the additional keys listed to appear in
+      the matched form; the keys vector may alternately be :any or :all to specify that any
+      additional keys may appear.
+    * :then {k1 v1, k2 v2...} specifies that the named parameters given by k1, k2, etc. (which
+      should not listed in params) should also be set to the values v1, v2, etc. in the resulting
+      satisfier map when matched.
+  "
+  [form & more]
+  (let [form                 (if (with-meta? form) form #{form})
+        [params & more]      more
+        [params condfn more] (if (or (coll? params) (nil? params))
+                               [params (first more) (next more)]
+                               [nil params more])
+        [condfn more]        (if (contains? patt-options condfn)
+                               [nil (cons condfn more)]
+                               [condfn more])
+        {a :allow t :then}   more
+        meta                 (merge (when (or params condfn) {(vec params) condfn})
+                                    (when a {:allow (vec a)})
+                                    (when t {:then  (if (map? t) t (apply hash-map t))}))]
+    (if-not (empty? meta) (with-meta form meta) form)))
+(defmacro pattern
+  "
+  (pattern form [p1 p2...] condition) yields a patterm with the given form, the given set of
+    parameters [p1 p2...], and the given condition expression (which may refer to the parameters).
+  (pattern form [p1 p2...]) yields a pattern without an explicit condition.
+
+  Note that patterns are expressed in meta-data, thus the returned pattern is likely to be form or
+  a set containing form with additional meta-data.
+
+  The following optional arguments are accepted:
+    * :allow [keys] specifies that the pattern should allow the additional keys listed to appear in
+      the matched form; the keys vector may alternately be :any or :all to specify that any
+      additional keys may appear.
+    * :then {k1 v1, k2 v2...} specifies that the named parameters given by k1, k2, etc. (which
+      should not listed in params) should also be set to the values v1, v2, etc. in the resulting
+      satisfier map when matched.
+  "
+  [form & more]
+  (let [[params condfn a t]
+        (loop [s (seq more), dat (transient {})]
+          (if s
+            (let [f (first s), n (next s)]
+              (cond (or (= f :allow) (= f :then))
+                    (if (nil? n)
+                      (arg-err "no value given for " f)
+                      (recur (next n) (assoc! dat f (first n))))
+                    (identical? (get dat :params missing) missing)
+                    (recur (next s) (assoc! dat :params f))
+                    (identical? (get dat :condfn missing) missing)
+                    (recur (next s) (assoc! dat :condfn f))
+                    :else (arg-err "unrecognized argument: " f)))
+            [(get dat :params) (get dat :condfn missing) (get dat :allow) (get dat :then)]))
+        fnargs (vec params)
+        kwargs (vec (map keyword params))
+        meta   (merge {kwargs (if (or (identical? condfn missing) (true? condfn))
+                                `(fn [] true)
+                                `(fn ~fnargs ~condfn))}
+                      (when a {:allow (if (contains? #{:any :all} a) :any (vec a))})
+                      (when t {:then  (if (map? t) t (apply hash-map t))}))]
+    (if-not (empty? meta)
+      `(let [f# ~form] (with-meta (if (with-meta? f#) f# #{f#}) ~meta))
+      form)))
+
 ;; #DerefView ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (declare at)
 (defrecord DerefView [derefable lens-path]
@@ -663,12 +895,18 @@
   (at d k1 k2...) is roughly equivalent to (reduce dict-get d [k1 k2...]) except that it leaves any
     dict-set type that it encounters as a set.
   "
-  ([d] d)
-  ([d & more]
-   (if (derefable? d)
-     (DerefView. d more)
-     (let [k (first more), nk (next more)]
-       (dict-view k d (if nk #(apply at % nk) identity))))))
+  [d & more]
+  (cond (empty? more)  d
+        (derefable? d) (DerefView. d more)
+        (dict-set? d)  (apply indexed-set (map #(apply at % more) (dict-seq d)))
+        (dict-row? d)  (let [k (first more), nk (next more)]
+                         (if (dict-lens? k)
+                           (dict-view k d (if nk #(apply at % nk) identity))
+                           (let [v (dict-get d k missing)]
+                             (if (identical? v missing)
+                               (arg-err "Key not found in dict: " k)
+                               (apply at v nk)))))
+        :else          (arg-err "Cannot access element of non-dict")))
 
 ;; the with function
 (defn with-part

@@ -76,3 +76,20 @@
   "
   [x]
   (instance? clojure.lang.ITransientCollection x))
+
+;; #meta-data? ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn meta?
+  "
+  (meta? x) yields true if x is an instance of IMeta and false otherwise. See also with-meta?.
+  "
+  [x]
+  (instance? clojure.lang.IMeta x))
+
+;; #meta? ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn with-meta?
+  "
+  (with-meta? x) yields true if x is an instance of IObj and false otherwise.
+  "
+  [x]
+  (instance? clojure.lang.IObj x))
+

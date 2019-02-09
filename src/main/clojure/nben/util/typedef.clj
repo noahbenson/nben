@@ -122,14 +122,22 @@
        (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11#] (arity-err self# 11))
        (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12#] (arity-err self# 12))
        (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13#] (arity-err self# 13))
-       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14#] (arity-err self# 14))
-       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15#] (arity-err self# 15))
-       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16#] (arity-err self# 16))
-       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16# i17#] (arity-err self# 17))
-       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16# i17# i18#] (arity-err self# 18))
-       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16# i17# i18# i19#] (arity-err self# 19))
-       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16# i17# i18# i19# i20#] (arity-err self# 20))
-       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16# i17# i18# i19# i20# ii#] (arity-err self# 21))
+       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14#]
+         (arity-err self# 14))
+       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15#]
+         (arity-err self# 15))
+       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16#]
+         (arity-err self# 16))
+       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16# i17#]
+         (arity-err self# 17))
+       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14#
+                i15# i16# i17# i18#] (arity-err self# 18))
+       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14#
+                i15# i16# i17# i18# i19#] (arity-err self# 19))
+       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14#
+                i15# i16# i17# i18# i19# i20#] (arity-err self# 20))
+       (invoke [self# i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14#
+                i15# i16# i17# i18# i19# i20# ii#] (arity-err self# 21))
        (applyTo [self# args#]
          (if (= (count args#) 1) (.nth self# (first args#)) (arity-err self# (count args#))))
 
@@ -308,14 +316,22 @@
        (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11#] (arity-err ~self 11))
        (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12#] (arity-err ~self 12))
        (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13#] (arity-err ~self 13))
-       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14#] (arity-err ~self 14))
-       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15#] (arity-err ~self 15))
-       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16#] (arity-err ~self 16))
-       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16# i17#] (arity-err ~self 17))
-       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16# i17# i18#] (arity-err ~self 18))
-       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16# i17# i18# i19#] (arity-err ~self 19))
-       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16# i17# i18# i19# i20#] (arity-err ~self 20))
-       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16# i17# i18# i19# i20# ii#] (arity-err ~self 21))
+       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14#]
+         (arity-err ~self 14))
+       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15#]
+         (arity-err ~self 15))
+       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16#]
+         (arity-err ~self 16))
+       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14# i15# i16# i17#]
+         (arity-err ~self 17))
+       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14#
+                i15# i16# i17# i18#] (arity-err ~self 18))
+       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14#
+                i15# i16# i17# i18# i19#] (arity-err ~self 19))
+       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14#
+                i15# i16# i17# i18# i19# i20#] (arity-err ~self 20))
+       (invoke [~self i1# i2# i3# i4# i5# i6# i7# i8# i9# i10# i11# i12# i13# i14#
+                i15# i16# i17# i18# i19# i20# ii#] (arity-err ~self 21))
        (applyTo [~self ~arg1]
          (if (= (count ~arg1) 1) (.nth ~self (first ~arg1)) (arity-err ~self (count ~arg1))))
 

@@ -671,18 +671,17 @@
     value v in b also.
   "
   [a b]
-  (cond (empty? a) b
-        (empty? b) a
-        :else (let [[a b] (if (< (count a) (count b)) [a b] [b a])]
-                (loop [a (seq a), b (transient b)]
-                  (if-not a
-                    (persistent! b)
-                    (let [[k v] (first a), bv (get b k missing)]
-                      (cond (identical? bv missing) (recur (next a) (assoc! b k v))
-                            (= bv v)                (recur (next a) b)
-                            :else                   nil)))))))
+  (let [[a b] (if (< (count aks) (count bks)) [a b] [b a]), aks (dict-keys a), bks (dict-keys b)]
+    (cond (empty? aks) b, (empty? bks) a,
+          :else (loop [aks aks, b (reduce #(assoc! %1 %2 (dict-get b %2 nil)) (transient {}) bks)]
+                  (if aks
+                      (let [k (first aks), v (dict-get a k nil), bv (get b k missing)]
+                        (cond (identical? bv missing) (recur (next a) (assoc! b k v))
+                              (= bv v)                (recur (next a) b)
+                              :else                   nil))
+                      (persistent! b))))))
 (defn- basic-join [a b]
-  (let [a (filter map? (seq a)), sb (filter map? (seq b))]
+  (let [a (filter dict-row? (seq a)), sb (filter dict-row? (seq b))]
     (when-not (and (empty? a) (empty? b))
       (let [r (loop [q (first a), a (next a), b sb, r (transient #{})]
                 (cond b     (recur q a (next b)
@@ -846,85 +845,163 @@
       form)))
 
 ;; #DerefView ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(declare at)
+(declare view)
 (defrecord DerefView [derefable lens-path]
   clojure.lang.IDeref
-  (deref [_] (apply at (deref derefable) lens-path))
+  (deref [_] (apply view (deref derefable) lens-path))
   ;; a View may be either a set or a row, depending on what it holds...
   PDictRow
   (dict-row? [this]         (dict-row? (deref this)))
   (dict-get  [this k nf]    (dict-get  (deref this) k nf))
   (dict-keys [this]         (dict-keys (deref this)))
   (dict-key? [this k]       (dict-key? (deref this) k))
-  (dict-sub  [this ks nf f] (dict-sub (deref this) ks nf f))
+  (dict-sub  [this ks nf f] (dict-sub  (deref this) ks nf f))
   (dict-set  [this k v]
     (let [l0 (first lens-path), kk (dict-lens-of l0 k missing)]
       (if (identical? kk missing)
         (dict-key-err k)
         (let [newderef (dict-set derefable kk v)]
-          (if (identical? newderef derefable) this (apply at newderef lens-path))))))
+          (if (identical? newderef derefable) this (apply view newderef lens-path))))))
   (dict-unset [this k]
     (let [l0 (first lens-path), kk (dict-lens-of l0 k missing)]
       (when-not (identical? kk missing)
         (let [dnew (dict-unset derefable kk), lens-path (cons (dict-ldrop l0 kk) (next lens-path))]
           (if (identical? derefable dnew)
             (DerefView. dnew lens-path)
-            (apply at dnew lens-path))))))
+            (apply view dnew lens-path))))))
   PDictSet
   (dict-set? [this]   (dict-set? (deref this)))
   (dict-has? [this k] (dict-has? (deref this) k))
   (dict-seq  [this]   (dict-seq  (deref this)))
   (dict-drop [this k] (let [x (dict-drop derefable k)]
-                        (if (identical? derefable x) this (apply at x lens-path))))
+                        (if (identical? derefable x) this (apply view x lens-path))))
   (dict-add  [this k] (let [x (dict-add derefable k)]
-                        (if (identical? derefable x) this (apply at x lens-path)))))
+                        (if (identical? derefable x) this (apply view x lens-path)))))
 (defmethod print-method DerefView [v ^java.io.Writer w]
-  (.write w (str "#at[" (.derefable v) (apply str (interleave (.lens-path v) (repeat " ")) "]"))))
+  (.write w (str "#view[" (.derefable v) (apply str (interleave (.lens-path v) (repeat " ")) "]"))))
 
 ;; #IndexedSet ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;#TODO
 (def- indexed-set hash-set)
 (defn- indexed-set? [_] false)
 
-;; #at ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn at
+;; #view ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn view
   "
-  (at d) yields d.
-  (at d k) is equivalent to (dict-get d k) except that it throws an exception if the value is not
+  (view d) yields d.
+  (view d k) is equivalent to (dict-get d k) except that it throws an exception if the value is not
     found.
-  (at d k1 k2...) is roughly equivalent to (reduce dict-get d [k1 k2...]) except that it leaves any
-    dict-set type that it encounters as a set.
+  (view d k1 k2...) is roughly equivalent to (reduce dict-get d [k1 k2...]) except that it leaves
+    any dict-set type that it encounters as a set.
   "
   [d & more]
   (cond (empty? more)  d
         (derefable? d) (DerefView. d more)
-        (dict-set? d)  (apply indexed-set (map #(apply at % more) (dict-seq d)))
+        (dict-set? d)  (apply indexed-set (map #(apply view % more) (dict-seq d)))
         (dict-row? d)  (let [k (first more), nk (next more)]
                          (if (dict-lens? k)
-                           (dict-view k d (if nk #(apply at % nk) identity))
+                           (dict-view k d (if nk #(apply view % nk) identity))
                            (let [v (dict-get d k missing)]
                              (if (identical? v missing)
                                (arg-err "Key not found in dict: " k)
-                               (apply at v nk)))))
+                               (apply vew v nk)))))
         :else          (arg-err "Cannot access element of non-dict")))
 
-;; the with function
-(defn with-part
+;; #edit and #edits ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn edits
   "
-  (with-part d keys... dval) yields a duplicate of the dictionary d but with the dict-subionary
-    specified by the given keys replaced with the dict-sub dval. The dval dictionary must have a
-    matching shape as the selected subdict, which will have a shape equivalent to (part d keys...).
-    Note that dval may not fully specify all elements but instead specify all elements below the
-    given level.
+  (edits d keys1 dval1 keys2 dval2...) yields a duplicate of the dictionary d but with the
+    dict-subionaries specified by the given key-vectors (keys1, keys2, etc.) replaced with the
+    dict-sub dvals. The dval dictionaries must have a matching shape as the selected subdict, which
+    will have a shape equivalent to (view d keys...). Note that the dvals may not fully specify
+    all elements but instead specify all elements below the given level (i.e., this will thread over
+    elements if possible).
+  (edits d) yields d.
+
+  Note that any dval may be set to the special object del, which indicates that the key should be
+  dissociated from the dict.
 
   Examples:
     (def data {:a {:b [4 6 8] :c [3 5 7]} :x {:y 1 :z 4}})
-    (with-part data :a :c [0 2] [:x :y])
+    (edits data [:a :c [0 2]] [:x :y])
        ; ==> {:a {:b [4 6 8] :c [:x 5 y]} :x {:y 1 :z 4}}
-    (with-part data :a [:c :b] all [[0 1 2] [3 4 5]])
+    (edits data [:a [:c :b] all] [[0 1 2] [3 4 5]])
        ; ==> {:a {:b [3 4 5] :c [0 1 2]} :x {:y 1 :z 4}}
-    (with-part data :a [:c :b] all {:b [0 1 2], :c [3 4 5]})
+    (edits data :a [[:c :b] all] {:b [0 1 2], :c [3 4 5]})
+       ; ==> {:a {:b [0 1 2] :c [3 4 5]} :x {:y 1 :z 4}}
+  "
+  ([d] d)
+  ([d ks v]
+   (if (empty? ks)
+     v
+     (let [k (first ks), d (view d k)]
+       ;; #here #TODO
+       nil)))
+  ([d k1 v1 & more]
+   (loop [s (seq more), d (edits d k1 v1)]
+     (if s
+       (if-let [ss (next s)]
+         (recur (next ss) (edits d (first s) (first ss)))
+         (arg-err "edits: even number of key/value arguments required"))
+       d))))
+          
+(defn edit
+  "
+  (edit d keys... dval) yields a duplicate of the dictionary d but with the dict-subionary specified
+    by the given keys replaced with the dict-sub dval. The dval dictionary must have a matching
+    shape as the selected subdict, which will have a shape equivalent to (part d keys...). Note that
+    dval may not fully specify all elements but instead specify all elements below the given level.
+
+  Examples:
+    (def data {:a {:b [4 6 8] :c [3 5 7]} :x {:y 1 :z 4}})
+    (edit data :a :c [0 2] [:x :y])
+       ; ==> {:a {:b [4 6 8] :c [:x 5 y]} :x {:y 1 :z 4}}
+    (edit data :a [:c :b] all [[0 1 2] [3 4 5]])
+       ; ==> {:a {:b [3 4 5] :c [0 1 2]} :x {:y 1 :z 4}}
+    (edit data :a [:c :b] all {:b [0 1 2], :c [3 4 5]})
+       ; ==> {:a {:b [0 1 2] :c [3 4 5]} :x {:y 1 :z 4}}
+  "
+  [d k1 & more]
+  (let [[ks v] (most-last (cons k1 more))]
+    (if (empty? ks) v (edits d ks v))))
+
+;; #with ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn with
+  "
+  (with d keys... dval) yields a duplicate of the dictionary d but with the dict-subionary specified
+    by the given keys replaced with the dict-sub dval. The dval dictionary must have a matching
+    shape as the selected subdict, which will have a shape equivalent to (part d keys...). Note that
+    dval may not fully specify all elements but instead specify all elements below the given level.
+
+  Examples:
+    (def data {:a {:b [4 6 8] :c [3 5 7]} :x {:y 1 :z 4}})
+    (edit data :a :c [0 2] [:x :y])
+       ; ==> {:a {:b [4 6 8] :c [:x 5 y]} :x {:y 1 :z 4}}
+    (edit data :a [:c :b] all [[0 1 2] [3 4 5]])
+       ; ==> {:a {:b [3 4 5] :c [0 1 2]} :x {:y 1 :z 4}}
+    (edit data :a [:c :b] all {:b [0 1 2], :c [3 4 5]})
        ; ==> {:a {:b [0 1 2] :c [3 4 5]} :x {:y 1 :z 4}}
   "
   [d k1 & more]
   nil)
+
+;; #wout ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn wout
+  "
+  (edit d keys... dval) yields a duplicate of the dictionary d but with the dict-subionary specified
+    by the given keys replaced with the dict-sub dval. The dval dictionary must have a matching
+    shape as the selected subdict, which will have a shape equivalent to (part d keys...). Note that
+    dval may not fully specify all elements but instead specify all elements below the given level.
+
+  Examples:
+    (def data {:a {:b [4 6 8] :c [3 5 7]} :x {:y 1 :z 4}})
+    (edit data :a :c [0 2] [:x :y])
+       ; ==> {:a {:b [4 6 8] :c [:x 5 y]} :x {:y 1 :z 4}}
+    (edit data :a [:c :b] all [[0 1 2] [3 4 5]])
+       ; ==> {:a {:b [3 4 5] :c [0 1 2]} :x {:y 1 :z 4}}
+    (edit data :a [:c :b] all {:b [0 1 2], :c [3 4 5]})
+       ; ==> {:a {:b [0 1 2] :c [3 4 5]} :x {:y 1 :z 4}}
+  "
+  [d k1 & more]
+  nil)
+

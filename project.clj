@@ -15,7 +15,7 @@
                  [clj-time "0.13.0"]
                  [smee/binary "0.5.1"]
                  [instaparse "1.4.8"]
-                 [com.cerner/clara-rules "0.17.0"]
+                 [com.cerner/clara-rules "0.19.0"]
                  ;[net.mikera/core.matrix "0.59.0"]
                  [potemkin "0.4.5"]]
   ;; location of source codes

@@ -68,20 +68,24 @@
   (meta [_] meta-data)
   (with-meta [_ mta] (RangeSet. start end inc mta)))
 (defn range-set
-  "(range-set start end inc) is equivalent to (set (range start end inc)) but runs in constant time
-     and has constant-time lookup. If items are conj'ed to or disj'ed from the set such that it can
-     no longer be represented as a simple range, then the return value is constructed from a
-     reified version of the range.
-   (range-set start end) is equivalent to (range-set start end 1).
-   (range-set end) is equivalent to (range-set 0 end 1)."
+  "
+  (range-set start end inc) is equivalent to (set (range start end inc)) but runs in constant time
+    and has constant-time lookup. If items are conj'ed to or disj'ed from the set such that it can
+    no longer be represented as a simple range, then the return value is constructed from a
+    reified version of the range.
+  (range-set start end) is equivalent to (range-set start end 1).
+  (range-set end) is equivalent to (range-set 0 end 1).
+  "
   ([end] (RangeSet. 0 end 1 nil))
   ([start end] (RangeSet. start end 1 nil))
   ([start end inc] (RangeSet. start end inc nil)))
 (defn key-set
-  "(key-set map) yields a set of the keys in map. This is performed in constant time. The map
-     parameter may be a map (in which case the keys are used) or a vector (in which case a range-set
-     ise used). If map is neither of these, then nil is yielded. The object returned is of type
-     MapKeySet or of type RangeSet."
+  "
+  (key-set map) yields a set of the keys in map. This is performed in constant time. The map
+    parameter may be a map (in which case the keys are used) or a vector (in which case a range-set
+    is used). If map is neither of these, then nil is yielded. The object returned is of type
+    MapKeySet or of type RangeSet.
+  "
   [map]
   (cond (map? map)    (->MapKeySet map)
         (vector? map) (->RangeSet 0 (count map) 1 nil)

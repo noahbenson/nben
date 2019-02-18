@@ -319,6 +319,7 @@
 ;;
 ;; dict-reduce:
 ;;  (dict-reduce
+(declare view edit edits with wout sats sat?)
 (defrecord ^:private All [])
 (def all
   "
@@ -369,6 +370,7 @@
            :dict-set   #(do (swap! %1 dict-set %2 %3) %1)
            :dict-unset #(do (swap! %1 dict-unset %2 %3) %1)
            :dict-key?  #(dict-key? (deref %1) %2)
+           :dict-dims  #(dict-dims (deref %1))
            :dict-sub   #(do (swap! %1 dict-sub %2 %3 %4) %1)}
    :ref   {:dict-row?  (comp dict-row? deref)
            :dict-get   #(dict-get (deref %1) %2 %3)
@@ -376,6 +378,7 @@
            :dict-set   #(do (alter %1 dict-set %2 %3) %1)
            :dict-unset #(do (alter %1 dict-unset %2 %3) %1)
            :dict-key?  #(dict-key? (deref %1) %2)
+           :dict-dims  #(dict-dims (deref %1))
            :dict-sub   #(do (alter %1 dict-sub %2 %3 %4) %1)}
    :vol   {:dict-row?  (comp dict-row? deref)
            :dict-get   #(dict-get (deref %1) %2 %3)
@@ -383,6 +386,7 @@
            :dict-set   #(do (swap! %1 dict-set %2 %3) %1)
            :dict-unset #(do (swap! %1 dict-unset %2 %3) %1)
            :dict-key?  #(dict-key? (deref %1) %2)
+           :dict-dims  #(dict-dims (deref %1))
            :dict-sub   #(do (swap! %1 dict-sub %2 %3 %4) %1)}
    :deref {:dict-row?  (comp dict-row? deref)
            :dict-get   #(dict-get (deref %1) %2 %3)
@@ -390,6 +394,7 @@
            :dict-set   #(dict-set (deref %1) %2 %3)
            :dict-unset #(dict-unset (deref %1) %2)
            :dict-key?  #(dict-key? (deref %1) %2)
+           :dict-dims  #(dict-dims (deref %1))
            :dict-sub   #(dict-sub (deref %1) %2 %3 %4)}
    :vec   {:dict-row?  constantly-true
            :dict-get   get
@@ -401,6 +406,7 @@
                               (= (inc %2) (count %1)) (pop %1)
                               :else                   (dissoc (seqmap %1) %2))
            :dict-key?  contains?
+           :dict-dims  count
            :dict-sub   (fn [this ii nf f]
                          (let [v (persistent!
                                   (if (identical? ii all)
@@ -413,6 +419,7 @@
            :dict-set   assoc
            :dict-unset dissoc
            :dict-key?  contains?
+           :dict-dims  count
            :dict-sub   (fn [d ii nf f]
                          (let [m (persistent!
                                   (if (identical? ii all)
@@ -425,6 +432,7 @@
            :dict-set   #(dict-set   (vec %1) %2 %3)
            :dict-unset #(dict-unset (vec %1) %2)
            :dict-key?  #(dict-key? (vec %1) %2)
+           :dict-dims  count
            :dict-sub   #(dict-sub (vec %1) %2 %3 %4)}
    :obj   {:dict-row?  constantly-false
            :dict-get   #(arg-err "attempt to get from non-dict-row")
@@ -432,6 +440,7 @@
            :dict-set   #(arg-err "attempt to set non non-dict-row")
            :dict-unset #(arg-err "attempt to unset non non-dict-row")
            :dict-key?  constantly-nil
+           :dict-dims  #(arg-err "attempt to find dims of non-dict-row")
            :dict-sub   #(arg-err "attempt to subdict non-dict-row")}}
   (dict-row? [_] "
   (dict-row? r) yields true if r is a valid dict-row object and false otherwise.
@@ -465,6 +474,10 @@
   (dict-key? [_ k] "
   (dict-key? d k) yields true if k is a key in the dictionary row d; otherwise yields false. If d is
     not a dictionary row, yields nil.
+  ")
+  (dict-dims [_] "
+  (dict-dims d) yields the number of dimensions in the dictionary d assuming that dictionary d is a
+    dict-row object.
   ")
   (dict-sub [_ ii not-found subfn] "
   (dict-sub d ii not-found subfn) yields a sub-dictionary like d but with only the key or keys found
@@ -569,31 +582,43 @@
          (derefable? %) :deref (dict-row? %) :drow, (dict-set? %) :dset,
          :else :obj)
   {:set  {:dict-lens?   constantly-true
+          :dict-lens-kv #(map vector (seq %1) (seq %1))
           :dict-view    #(set-view %2 %3 (seq %1))
           :dict-lens-of get
           :dict-ldrop   disj}
    :map  {:dict-lens?   constantly-true
+          :dict-lens-kv #(seq %1)
           :dict-view    #(map-view %2 %3 (keys %1) (vals %1))
           :dict-lens-of get
           :dict-ldrop   dissoc}
    :seq  {:dict-lens?   constantly-true
+          :dict-lens-kv #(map vector (range) (seq %1))
           :dict-view    #(seq-view %2 %3 (seq %1))
           :dict-lens-of nth
           :dict-ldrop   #(dissoc (seqmap %1) %2)}
    :drow {:dict-lens?   constantly-true
+          :dict-lens-kv #(for [k (dict-keys %1)] [k (dgeterr %1 k)])
           :dict-view    #(let [ks (dict-keys %1)] (map-view %2 %3 ks (map (partial dgeterr %1) ks)))
           :dict-lens-of dict-get
           :dict-ldrop   dict-unset}
    :dset {:dict-lens?   constantly-true
+          :dict-lens-kv #(map vector (dict-seq %1) (dict-seq %1))
           :dict-view    #(set-view %2 %3 (dict-seq %1))
           :dict-lens-of #(if (dict-has? %1 %2) %2 %3)
           :dict-ldrop   dict-drop}
    :obj  {:dict-lens?   constantly-false
+          :dict-lens-kv #(cons [%1 %1] nil)
           :dict-view    #(%3 (dgeterr %2 %1))
           :dict-lens-of #(arg-err "lens-of queried of non-lens object " %1)
           :dict-ldrop   #(arg-err "lens-drop requested of non-lens object" %1)}}
   (dict-lens? [_] "
   (dict-lens? l) yields true if l is a valid dictionary lens object and false otherwise.
+  ")
+  (dict-lens-kv [_ d] "
+  (dict-lens kv l d) yields a seq of map-entries or 2-vectors [k v] where k is the key transformed
+    by the lens l into the key v when applied to the dictionary d. For most lenses, the d may be
+    replace with any value, but for lenses that depend on their dictionary's contents, such as all,
+    the d is required to be correct.
   ")
   (dict-view [_ d f] "
   (dict-view l d f) yields a view of the given dictionary d through the given lens l with the
@@ -609,11 +634,15 @@
 (extend-protocol PDictLens
   nil
   (dict-lens? [_] false)
+  (dict-lens-kv [_ d] (cons [nil nil] nil))
   (dict-view [_ d f] (dgeterr d nil))
   (dict-lens-of [_ k nf] nf)
   (dict-ldrop [_ k] nil)
   All
   (dict-lens? [_] true)
+  (dict-lens-kv [_ d] (if (dict-row? d)
+                        (map vector (dict-keys d) (dict-keys d))
+                        (arg-err "cannot take all dict-keys of non dict-row")))
   (dict-view [_ d f] (dict-sub d all nil f))
   (dict-lens-of [_ k nf] k)
   (dict-ldrop [_ k] (arg-err "Cannot drop from an all index")))
@@ -697,13 +726,12 @@
                       :else           [#{p2} nil])
         m2 (if (or (empty? ps) (contains? m2 ps)) m2 (assoc m2 ps nil))]
     (if m2 (with-meta p2 m2) p2)))
-(declare match)
 (defn- dict-match [prow d]
   (let [params (patt-params prow)
         sats (cond
                ;; if this is a dict-set, we match anything inside of it
                (dict-set? d)
-               (apply concat (filter identity (map (partial match prow) (dict-seq d))))
+               (apply concat (filter identity (map (partial sats prow) (dict-seq d))))
                ;; if prow is a dict-set, we need to find matches to all of its elements
                (dict-set? prow)
                (let [s (dict-seq prow)]
@@ -711,9 +739,9 @@
                        (nil? (next s)) (let [f (first s)]
                                          (cond (contains? params f) #{{f d}}
                                                (dict-row? f) (dict-match (add-patt-meta f prow) d)
-                                               :else (match f d)))
+                                               :else (sats f d)))
                        :else (reduce basic-join
-                                     (map #(match (add-patt-meta % prow) d) (dict-seq prow)))))
+                                     (map #(sats (add-patt-meta % prow) d) (dict-seq prow)))))
                ;; if d is a not a dict, (and prow is not a set), there can't be a match
                (not (dict? d)) nil
                ;; if empty, simple:
@@ -733,7 +761,7 @@
                                   ;; could be that the pattern allows a wildcard
                                   (contains? params pv) (recur ks (basic-join sats [{pv v}]))
                                   ;; could be that they match... if not, no match here either...
-                                  :else (when-let [ms (match (add-patt-meta pv prow) v)]
+                                  :else (when-let [ms (sats (add-patt-meta pv prow) v)]
                                           (recur ks (basic-join sats ms)))))
                               sats))]
                  (when-not (empty? sats) sats))
@@ -748,19 +776,25 @@
   The PPattern protocol is extended by patterns and used in matching.
   "
   #(cond (nil? %) :obj, (map? %) :map, (set? %) :set, (vector? %) :vec, (seq? %) :seq, :else :obj)
-  {:map {:match dict-match}
-   :vec {:match dict-match}
-   :seq {:match dict-match}
-   :set {:match dict-match}
-   :obj {:match #(when (= %1 %2) #{{}})}}
-  (match [_ d] "
-  (match p d) yields a set of matches to the pattern p in the dictionary d. Each match is
-    represented as a map of parameters to matched values. If the set of matches is empty, nil is 
-    yielded. If the pattern has no parameters but there is a match, then the '({}) is yielded.
+  {:map {:sats dict-match}
+   :vec {:sats dict-match}
+   :seq {:sats dict-match}
+   :set {:sats dict-match}
+   :obj {:sats #(when (= %1 %2) #{{}})}}
+  (sats [_ d] "
+  (sats p d) yields the set of matches that satisfy the pattern p in the dictionary d. Each match is
+    represented as a map of parameters to matched values. If the set of satisfiers is empty, nil is 
+    yielded. If the pattern has no parameters but there is a match, then the '#{{}} is yielded.
   "))
+(defn sat?
+  "
+  (sat? p d) yields true if the given pattern p is satisfied by the dictionary d and false
+    otherwise.
+  "
+  [p d] (not (empty? (sats p d))))
 (defrecord ^:private Wildcard []
   PPattern
-  (match [_ d] #{{}}))
+  (sats [_ d] #{{}}))
 (def ??
   "
   ?? is a wildcard pattern; when used as a pattern, it matches against anything.
@@ -845,7 +879,6 @@
       form)))
 
 ;; #DerefView ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(declare view)
 (defrecord DerefView [derefable lens-path]
   clojure.lang.IDeref
   (deref [_] (apply view (deref derefable) lens-path))
@@ -908,6 +941,25 @@
         :else          (arg-err "Cannot access element of non-dict")))
 
 ;; #edit and #edits ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn- dicts-union [seq-of-vals]
+  (apply union (for [u (seq seq-of-vals)]
+                 (cond (set? u)      u
+                       (dict-set? u) (set (dict-seq u))
+                       :else         #{u}))))
+(defn- edit-vget
+  "
+  For a call like (edit d k1 k2 v), (edit-vget v k1) yields the value obtained by descending into
+  the value with key k1; if v is, for example, a string, this will yield v no matter what k1 is; if
+  k1 is a non-negative integer and v is a dict whose only key is 0, yields the value in v at 0 no
+  matter what value k has; otherwise, v must have a value at the given key k1."
+  [v k]
+  (cond
+    (dict-set? v)             (dicts-union (for [u (dict-seq v)] (edit-vget u k)))
+    (not (dict-row? v))       v
+    (dict-key? v k)           (dgeterr v k)
+    (and (dict-key? v 0)
+         (= 1 (dict-dims v))) (dgeterr v 0)
+    :else                     (arg-err "edit key mismatch at " v " with key " k)))
 (defn edits
   "
   (edits d keys1 dval1 keys2 dval2...) yields a duplicate of the dictionary d but with the
@@ -932,11 +984,15 @@
   "
   ([d] d)
   ([d ks v]
-   (if (empty? ks)
-     v
-     (let [k (first ks), d (view d k)]
-       ;; #here #TODO
-       nil)))
+   (cond (empty? ks)   v
+         (dict-set? d) (dicts-union (for [u (dict-seq d)] (edits u ks v)))
+         (dict-row? d) (let [[k & ks] ks]
+                         (build d d [[kd kv] (dict-lens-kv k d)
+                                     :let    [vv (edit-vget v kv), vd (dict-get d kd {})]]
+                           (if (identical? vv del)
+                             (dict-unset d kd)
+                             (dict-set d kd (if ks (edits vd ks vv) vv)))))
+         :else         (arg-err "cannot edit parts " ks " of non-dict object")))
   ([d k1 v1 & more]
    (loop [s (seq more), d (edits d k1 v1)]
      (if s
@@ -944,7 +1000,6 @@
          (recur (next ss) (edits d (first s) (first ss)))
          (arg-err "edits: even number of key/value arguments required"))
        d))))
-          
 (defn edit
   "
   (edit d keys... dval) yields a duplicate of the dictionary d but with the dict-subionary specified
@@ -982,8 +1037,15 @@
     (edit data :a [:c :b] all {:b [0 1 2], :c [3 4 5]})
        ; ==> {:a {:b [0 1 2] :c [3 4 5]} :x {:y 1 :z 4}}
   "
-  [d k1 & more]
-  nil)
+  [d & more]
+  (cond (empty? more)      d
+        (nil? (next more)) (if (dict-set? d) (dict-add d (first more)) #{d (first more)})
+        (dict-set? d)      (build d d [x (dict-seq d)]
+                             (dict-add (dict-drop d x) (apply with x more)))
+        :else              (let [[k & more] more]
+                             (if (dict-row? d)
+                               (dict-set d k (apply with (dict-get d k {}) more))
+                               (arg-err "with: cannot add into non-dict-row")))))
 
 ;; #wout ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn wout
@@ -1002,6 +1064,17 @@
     (edit data :a [:c :b] all {:b [0 1 2], :c [3 4 5]})
        ; ==> {:a {:b [0 1 2] :c [3 4 5]} :x {:y 1 :z 4}}
   "
-  [d k1 & more]
-  nil)
+  [d & more]
+  (cond (empty? more)      d
+        (nil? (next more)) (let [k (first more), k (if (dict-set? k) k #{k})]
+                             (cond (dict-set? d)   (reduce dict-drop d (dict-seq k))
+                                   (dict-has? k d) #{}
+                                   :else           d))
+        (dict-set? d)      (build d d [x (dict-seq d)]
+                             (dict-add (dict-drop d x) (apply wout x more)))
+        :else              (let [[k & more] more]
+                             (if (dict-row? d)
+                               (dict-set d k (apply wout (dict-get d k {}) more))
+                               (arg-err "wout: cannot drop from within non-dict-row")))))
+
 

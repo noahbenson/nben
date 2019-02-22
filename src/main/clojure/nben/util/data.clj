@@ -278,49 +278,6 @@
 ;;                        {:a #{1 2 3} :b 1 :c 10}
 ;;                        {:a 10 :b #{12} :c 10}
 ;;                        {:a #{1 2 3} :b 14 :c 10}}})
-;; part:
-;;  (part data :rows 0 :c)
-;;   ;==> [3 4]
-;;  (part foo :position :z)
-;;   ;==> #{-4 -2 2 4}
-;;  (part foo :position :y)
-;;   ;==> #{1 2}
-;;  (part data :rows all :a)
-;;   ;==> [1 #{1 2 3} 10 #{1 2 3}]
-;;  (part data :rows all [:a :b])
-;;   ;==> [[1 2] [#{1 2 3} 1] [10 12] [#{1 2 3} 14]]
-;;  (part data :rset :a)
-;;   ;==> #{1 2 3 10}
-;;  (part data :rset [:a :b])
-;;   ;==> #{[1  2]  [1 1]  [2 1]  [3 1]
-;;   ;      [10 12] [1 14] [2 14] [3 14]}
-;;  (part data :rset #{:a :b})
-;;   ;==> #{{:a 1  :b 2}  {:a 1 :b 1}  {:a 2 :b 1}  {:a 3 :b 1}
-;;   ;      {:a 10 :b 12} {:a 1 :b 14} {:a 2 :b 14} {:a 3 :b 14}}
-;;  (part data :rset {:a :c, :b :d})
-;;   ;==> #{{:c 1  :d 2}  {:c 1 :d 1}  {:c 2 :d 1}  {:c 3 :d 1}
-;;   ;      {:c 10 :d 12} {:c 1 :d 14} {:c 2 :d 14} {:c 3 :d 14}}
-;;
-;; subd:
-;;  (subd data :rows 0 :c)
-;;   ;==> [3 4]
-;;  (subd foo :position :z)
-;;   ;==> #{#{-2 2} #{-4 4}}
-;;  (subd foo :position :y)
-;;   ;==> #{1 2}
-;;  (subd data :rows all :a)
-;;   ;==> [1 #{1 2 3} 10 #{1 2 3}]
-;;  (subd data :rows all [:a :b])
-;;   ;==> [[1 2] [#{1 2 3} 1] [10 12] [#{1 2 3} 14]]
-;;  (subd data :rset :a)
-;;   ;==> #{1 #{1 2 3} 10}
-;;  (subd data :rset [:a :b])
-;;   ;==> #{{:a 1 :b 2} {:a #{1 2 3} :b 1} {:a 10 :b #{12}} {:a #{1 2 3} :b 14}}
-;;  (subd data :rset #{:a :b})
-;;   ;==> #{{:a 1 :b 2} {:a #{1 2 3} :b 1} {:a 10 :b #{12}} {:a #{1 2 3} :b 14}}
-;;
-;; dict-reduce:
-;;  (dict-reduce
 (declare view edit edits with wout sats sat?)
 (deftype ^:private All [])
 (def all

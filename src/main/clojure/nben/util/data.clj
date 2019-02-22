@@ -23,6 +23,8 @@
   (:use [nben.util typedef])
   (:use [nben.util misc])
   (:use [nben.util structured])
+  (:use [nben.util set])
+  (:use [nben.util iterator])
   (:require [clojure.string :refer [join] :rename {join string-join}]))
 
 ;; #PFreezable ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -320,26 +322,19 @@
 ;; dict-reduce:
 ;;  (dict-reduce
 (declare view edit edits with wout sats sat?)
-(defrecord ^:private All [])
+(deftype ^:private All [])
 (def all
   "
   all is an object that can be used to address all parts of an object in the el and part functions.
   "
   (All.))
-(defrecord ^:private Nought [])
-(def nought
-  "
-  nought is an object that is used by nben's dictionary system to indicate that something is not
-  found or should be deleted.
-  "
-  (Nought.))
 (def- missing
   "
   missing is used internally by nben's dictionary system to test for missing values via the
   dict-get function. It should never leave the nben.util.data namespace.
   "
   (Object.))
-(defrecord ^:private Del [])
+(deftype ^:private Del [])
 (def del
   "
   del is an object that can be used in with-part and with-el calls to indicate that an item should
@@ -364,7 +359,7 @@
          (derefable? %) :deref
          (set? %)       :obj
          :else          (dict-triage %))
-  {:atom  {:dict-row?  (comp dict-row? deref)
+  {:atom  {:dict-row?  #(dict-row? (deref %1))
            :dict-get   #(dict-get (deref %1) %2 %3)
            :dict-keys  #(dict-keys (deref %1))
            :dict-set   #(do (swap! %1 dict-set %2 %3) %1)
@@ -372,7 +367,7 @@
            :dict-key?  #(dict-key? (deref %1) %2)
            :dict-dims  #(dict-dims (deref %1))
            :dict-sub   #(do (swap! %1 dict-sub %2 %3 %4) %1)}
-   :ref   {:dict-row?  (comp dict-row? deref)
+   :ref   {:dict-row?  #(dict-row? (deref %1))
            :dict-get   #(dict-get (deref %1) %2 %3)
            :dict-keys  #(dict-keys (deref %1))
            :dict-set   #(do (alter %1 dict-set %2 %3) %1)
@@ -380,7 +375,7 @@
            :dict-key?  #(dict-key? (deref %1) %2)
            :dict-dims  #(dict-dims (deref %1))
            :dict-sub   #(do (alter %1 dict-sub %2 %3 %4) %1)}
-   :vol   {:dict-row?  (comp dict-row? deref)
+   :vol   {:dict-row?  #(dict-row? (deref %1))
            :dict-get   #(dict-get (deref %1) %2 %3)
            :dict-keys  #(dict-keys (deref %1))
            :dict-set   #(do (swap! %1 dict-set %2 %3) %1)
@@ -388,7 +383,7 @@
            :dict-key?  #(dict-key? (deref %1) %2)
            :dict-dims  #(dict-dims (deref %1))
            :dict-sub   #(do (swap! %1 dict-sub %2 %3 %4) %1)}
-   :deref {:dict-row?  (comp dict-row? deref)
+   :deref {:dict-row?  #(dict-row? (deref %1))
            :dict-get   #(dict-get (deref %1) %2 %3)
            :dict-keys  #(dict-keys (deref %1))
            :dict-set   #(dict-set (deref %1) %2 %3)
@@ -490,7 +485,9 @@
   (dict-get   [_ k nf]    nf)
   (dict-set   [_ k v]     (if (= k 0) (seqmap [v] {}) (seqmap [] {k v})))
   (dict-unset [_ k]       nil)
+  (dict-keys  [_]         nil)
   (dict-key?  [_ k]       false)
+  (dict-dims  [_]         0)
   (dict-sub   [_ ii nf f] (when-not (identical? ii all)
                             (seqmap (apply hash-map (interleave ii (repeat (f nf))))))))
 (defmultipro PDictSet
@@ -505,22 +502,22 @@
            :dict-seq  seq
            :dict-drop disj
            :dict-add  conj}
-   :ref   {:dict-set? (comp dict-set deref)
+   :ref   {:dict-set? #(dict-set? (deref %1))
            :dict-has? #(dict-has? (deref %1) %2)
            :dict-seq  #(dict-seq (deref %1))
            :dict-add  #(do (alter %1 dict-add %2) %1)
            :dict-drop #(do (alter %1 dict-drop %2) %1)}
-   :atom  {:dict-set? (comp dict-set deref)
+   :atom  {:dict-set? #(dict-set? (deref %1))
            :dict-has? #(dict-has? (deref %1) %2)
            :dict-seq  #(dict-seq (deref %1))
            :dict-add  #(do (swap! %1 dict-add %2) %1)
            :dict-drop #(do (swap! %1 dict-drop %2) %1)}
-   :vol   {:dict-set? (comp dict-set deref)
+   :vol   {:dict-set? #(dict-set? (deref %1))
            :dict-has? #(dict-has? (deref %1) %2)
            :dict-seq  #(dict-seq (deref %1))
            :dict-add  #(do (vswap! %1 dict-add %2) %1)
            :dict-drop #(do (vswap! %1 dict-drop %2) %1)}
-   :deref {:dict-set? (comp dict-set deref)
+   :deref {:dict-set? #(dict-set? (deref %1))
            :dict-has? #(dict-has? (deref %1) %2)
            :dict-seq  #(dict-seq (deref %1))
            :dict-add  #(dict-add (deref %1) %2)
@@ -582,35 +579,41 @@
          (derefable? %) :deref (dict-row? %) :drow, (dict-set? %) :dset,
          :else :obj)
   {:set  {:dict-lens?   constantly-true
-          :dict-lens-kv #(map vector (seq %1) (seq %1))
+          :dict-lens-kv (fn [k d] (map vector (seq k) (seq k)))
           :dict-view    #(set-view %2 %3 (seq %1))
           :dict-lens-of get
+          :lens-single? constantly-false
           :dict-ldrop   disj}
    :map  {:dict-lens?   constantly-true
-          :dict-lens-kv #(seq %1)
+          :dict-lens-kv (fn [k d] (seq k))
           :dict-view    #(map-view %2 %3 (keys %1) (vals %1))
+          :lens-single? constantly-false
           :dict-lens-of get
           :dict-ldrop   dissoc}
    :seq  {:dict-lens?   constantly-true
-          :dict-lens-kv #(map vector (range) (seq %1))
+          :dict-lens-kv (fn [k d] (map vector (range) (seq k)))
           :dict-view    #(seq-view %2 %3 (seq %1))
+          :lens-single? constantly-false
           :dict-lens-of nth
           :dict-ldrop   #(dissoc (seqmap %1) %2)}
    :drow {:dict-lens?   constantly-true
-          :dict-lens-kv #(for [k (dict-keys %1)] [k (dgeterr %1 k)])
+          :dict-lens-kv (fn [k d] (for [kk (dict-keys k)] [kk (dgeterr k kk)]))
           :dict-view    #(let [ks (dict-keys %1)] (map-view %2 %3 ks (map (partial dgeterr %1) ks)))
+          :lens-single? constantly-false
           :dict-lens-of dict-get
           :dict-ldrop   dict-unset}
    :dset {:dict-lens?   constantly-true
-          :dict-lens-kv #(map vector (dict-seq %1) (dict-seq %1))
+          :dict-lens-kv (fn [k d] (map vector (dict-seq k) (dict-seq k)))
           :dict-view    #(set-view %2 %3 (dict-seq %1))
+          :lens-single? constantly-false
           :dict-lens-of #(if (dict-has? %1 %2) %2 %3)
           :dict-ldrop   dict-drop}
    :obj  {:dict-lens?   constantly-false
-          :dict-lens-kv #(cons [%1 %1] nil)
+          :dict-lens-kv (fn [k d] (cons [k k] nil))
           :dict-view    #(%3 (dgeterr %2 %1))
-          :dict-lens-of #(arg-err "lens-of queried of non-lens object " %1)
-          :dict-ldrop   #(arg-err "lens-drop requested of non-lens object" %1)}}
+          :lens-single? constantly-true
+          :dict-lens-of #(if (= %1 %2) %2 %3)
+          :dict-ldrop   #(arg-err "lens-drop requested of non-lens object " %1 " (" %2 ")")}}
   (dict-lens? [_] "
   (dict-lens? l) yields true if l is a valid dictionary lens object and false otherwise.
   ")
@@ -624,6 +627,9 @@
   (dict-view l d f) yields a view of the given dictionary d through the given lens l with the
     function f applied to sub-elements.
   ")
+  (lens-single? [_] "
+  (lens-single? l) yields true if l is a single lens such as a keyword and false if it is not.
+  ")
   (dict-lens-of [_ k nf] "
   (dict-lens-of l k nf) yields the key into which the lens l transforms key k or nf if the lens l
     does not include key k.
@@ -636,6 +642,7 @@
   (dict-lens? [_] false)
   (dict-lens-kv [_ d] (cons [nil nil] nil))
   (dict-view [_ d f] (dgeterr d nil))
+  (lens-single? [_] false)
   (dict-lens-of [_ k nf] nf)
   (dict-ldrop [_ k] nil)
   All
@@ -644,6 +651,7 @@
                         (map vector (dict-keys d) (dict-keys d))
                         (arg-err "cannot take all dict-keys of non dict-row")))
   (dict-view [_ d f] (dict-sub d all nil f))
+  (lens-single? [_] false)
   (dict-lens-of [_ k nf] k)
   (dict-ldrop [_ k] (arg-err "Cannot drop from an all index")))
 
@@ -700,7 +708,8 @@
     value v in b also.
   "
   [a b]
-  (let [[a b] (if (< (count aks) (count bks)) [a b] [b a]), aks (dict-keys a), bks (dict-keys b)]
+  (let [[a b] (if (< (dict-dims a) (dict-dims b)) [a b] [b a])
+        aks (dict-keys a), bks (dict-keys b)]
     (cond (empty? aks) b, (empty? bks) a,
           :else (loop [aks aks, b (reduce #(assoc! %1 %2 (dict-get b %2 nil)) (transient {}) bks)]
                   (if aks
@@ -713,9 +722,8 @@
   (let [a (filter dict-row? (seq a)), sb (filter dict-row? (seq b))]
     (when-not (and (empty? a) (empty? b))
       (let [r (loop [q (first a), a (next a), b sb, r (transient #{})]
-                (cond b     (recur q a (next b)
-                                   (let [m (match-merge q (first b))] (if m (conj! r m) r)))
-                      a     (recur (first a) (next a) sb r)
+                (cond b (recur q a (next b) (if-let [m (match-merge q (first b))] (conj! r m) r))
+                      a (recur (first a) (next a) sb r)
                       :else (persistent! r)))]
         (when-not (empty? r) r)))))
 (defn- add-patt-meta [p2 p1] ;; from p1 to p2
@@ -728,49 +736,49 @@
     (if m2 (with-meta p2 m2) p2)))
 (defn- dict-match [prow d]
   (let [params (patt-params prow)
-        sats (cond
-               ;; if this is a dict-set, we match anything inside of it
-               (dict-set? d)
-               (apply concat (filter identity (map (partial sats prow) (dict-seq d))))
-               ;; if prow is a dict-set, we need to find matches to all of its elements
-               (dict-set? prow)
-               (let [s (dict-seq prow)]
-                 (cond (empty? s)      #{{}}
-                       (nil? (next s)) (let [f (first s)]
-                                         (cond (contains? params f) #{{f d}}
-                                               (dict-row? f) (dict-match (add-patt-meta f prow) d)
-                                               :else (sats f d)))
-                       :else (reduce basic-join
-                                     (map #(sats (add-patt-meta % prow) d) (dict-seq prow)))))
-               ;; if d is a not a dict, (and prow is not a set), there can't be a match
-               (not (dict? d)) nil
-               ;; if empty, simple:
-               (empty? d) (when (and (empty? prow) (patt-check prow {})) #{{}})
-               ;; if this is a dict-row, we match keys plus meta-data instructions:
-               (dict-row? d)
-               (let [{allow :allow, sarg :then} (meta prow)
-                     allow (cond (or (not allow) (= allow :none)) constantly-false
-                                 (contains? #{:any :all} allow)   constantly-true
-                                 :else                            allow)
-                     sats (loop [ks (dict-keys d), sats nil]
-                            (if ks
-                              (let [[k & ks] ks, v (dict-get d k d), pv (dict-get prow k missing)]
-                                (cond
-                                  ;; could be missing from the pattern
-                                  (identical? pv missing) (when (allow k) (recur ks sats))
-                                  ;; could be that the pattern allows a wildcard
-                                  (contains? params pv) (recur ks (basic-join sats [{pv v}]))
-                                  ;; could be that they match... if not, no match here either...
-                                  :else (when-let [ms (sats (add-patt-meta pv prow) v)]
-                                          (recur ks (basic-join sats ms)))))
-                              sats))]
-                 (when-not (empty? sats) sats))
-               ;; otherwise we don't match...
-               :else nil)
+        ss (cond
+             ;; if this is a dict-set, we match anything inside of it
+             (dict-set? d)
+             (apply concat (filter identity (map (partial sats prow) (dict-seq d))))
+             ;; if prow is a dict-set, we need to find matches to all of its elements
+             (dict-set? prow)
+             (let [s (dict-seq prow)]
+               (cond (empty? s)      #{{}}
+                     (nil? (next s)) (let [f (first s)]
+                                       (cond (contains? params f) #{{f d}}
+                                             (dict-row? f) (dict-match (add-patt-meta f prow) d)
+                                             :else (sats f d)))
+                     :else (reduce basic-join
+                                   (map #(sats (add-patt-meta % prow) d) (dict-seq prow)))))
+             ;; if d is a not a dict, (and prow is not a set), there can't be a match
+             (not (dict? d)) nil
+             ;; if empty, simple:
+             (empty? d) (when (and (empty? prow) (patt-check prow {})) #{{}})
+             ;; if this is a dict-row, we match keys plus meta-data instructions:
+             (dict-row? d)
+             (let [{allow :allow, sarg :then} (meta prow)
+                   allow (cond (or (not allow) (= allow :none)) constantly-false
+                               (contains? #{:any :all} allow)   constantly-true
+                               :else                            allow)
+                   ss (loop [ks (dict-keys d), ss nil]
+                        (if ks
+                          (let [[k & ks] ks, v (dict-get d k d), pv (dict-get prow k missing)]
+                            (cond
+                              ;; could be missing from the pattern
+                              (identical? pv missing) (when (allow k) (recur ks ss))
+                              ;; could be that the pattern allows a wildcard
+                              (contains? params pv) (recur ks (basic-join ss [{pv v}]))
+                              ;; could be that they match... if not, no match here either...
+                              :else (when-let [ms (sats (add-patt-meta pv prow) v)]
+                                      (recur ks (basic-join ss ms)))))
+                          ss))]
+               (when-not (empty? ss) ss))
+             ;; otherwise we don't match...
+             :else nil)
         sarg (patt-then prow)]
-    (when-let [sats (filter (partial patt-check prow)
-                            (if sarg (map (partial basic-join [sarg]) sats) sats))]
-      (when-not (empty? sats) (set sats)))))
+    (when-let [ss (filter (partial patt-check prow)
+                          (if sarg (map (partial basic-join [sarg]) ss) ss))]
+      (when-not (empty? ss) (set ss)))))
 (defmultipro PPattern
   "
   The PPattern protocol is extended by patterns and used in matching.
@@ -792,7 +800,7 @@
     otherwise.
   "
   [p d] (not (empty? (sats p d))))
-(defrecord ^:private Wildcard []
+(deftype ^:private Wildcard []
   PPattern
   (sats [_ d] #{{}}))
 (def ??
@@ -870,7 +878,7 @@
         fnargs (vec params)
         kwargs (vec (map keyword params))
         meta   (merge {kwargs (if (or (identical? condfn missing) (true? condfn))
-                                `(fn [] true)
+                                `(fn [& more#] true)
                                 `(fn ~fnargs ~condfn))}
                       (when a {:allow (if (contains? #{:any :all} a) :any (vec a))})
                       (when t {:then  (if (map? t) t (apply hash-map t))}))]
@@ -889,11 +897,14 @@
   (dict-keys [this]         (dict-keys (deref this)))
   (dict-key? [this k]       (dict-key? (deref this) k))
   (dict-sub  [this ks nf f] (dict-sub  (deref this) ks nf f))
-  (dict-set  [this k v]
-    (let [l0 (first lens-path), kk (dict-lens-of l0 k missing)]
+  (dict-set  [this k v] 
+    (let [lp (filter (comp not lens-single?) lens-path)
+          ss (take-while lens-single? lens-path)
+          l0 (if (empty? lp) missing (first lp))
+          kk (if (identical? l0 missing) k (dict-lens-of l0 k missing))]
       (if (identical? kk missing)
-        (dict-key-err k)
-        (let [newderef (dict-set derefable kk v)]
+        (arg-err "attempt to set unrecognized key " kk " in derefable view")
+        (let [newderef (edits derefable (concat ss [kk]) v)]
           (if (identical? newderef derefable) this (apply view newderef lens-path))))))
   (dict-unset [this k]
     (let [l0 (first lens-path), kk (dict-lens-of l0 k missing)]
@@ -937,8 +948,14 @@
                            (let [v (dict-get d k missing)]
                              (if (identical? v missing)
                                (arg-err "Key not found in dict: " k)
-                               (apply vew v nk)))))
+                               (apply view v nk)))))
         :else          (arg-err "Cannot access element of non-dict")))
+;; #view ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn part
+  "
+  (part args...) yields (freeze (view args...)).
+  "
+  [& args] (freeze (apply view args)))
 
 ;; #edit and #edits ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn- dicts-union [seq-of-vals]
@@ -987,11 +1004,12 @@
    (cond (empty? ks)   v
          (dict-set? d) (dicts-union (for [u (dict-seq d)] (edits u ks v)))
          (dict-row? d) (let [[k & ks] ks]
-                         (build d d [[kd kv] (dict-lens-kv k d)
-                                     :let    [vv (edit-vget v kv), vd (dict-get d kd {})]]
-                           (if (identical? vv del)
-                             (dict-unset d kd)
-                             (dict-set d kd (if ks (edits vd ks vv) vv)))))
+                         (build d d [[kv kd] (dict-lens-kv k d)
+                                     :let    [vv (if (lens-single? k) v (edit-vget v kv))
+                                              vd (dict-get d kd {})]]
+                           (cond ks (dict-set d kd (if ks (edits vd ks vv) vv))
+                                 (identical? vv del) (dict-unset d kd)
+                                 :else (dict-set d kd vv))))
          :else         (arg-err "cannot edit parts " ks " of non-dict object")))
   ([d k1 v1 & more]
    (loop [s (seq more), d (edits d k1 v1)]

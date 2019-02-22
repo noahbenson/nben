@@ -34,7 +34,7 @@
      :insts [77 54 20 5]}
     {:eid 4, :type :rock, :data {:type :sedimentary, :name :shale, :position [0 0 0]}
      :insts [1 9 64 12]}})
-(def par-database (->> map-database (map ref) set ref))
+(defn par-database [] (->> map-database (map ref) set ref))
 
 (def q-old-trees
   (pattern {:data {:species :s, :position [:x :y :z], :props :old}} [s x y z] true :allow :any))
@@ -47,7 +47,7 @@
             (and (= (fnext s) {:s :oak   :x 0 :y 0 :z 1})
                  (= (first s) {:s :maple :x 0 :y 2 :z 2}))))))
 (deftest test-view
-  (doseq [db [map-database par-database] :let [v (view db :insts [1 3])]]
+  (doseq [db [map-database (par-database)] :let [v (view db :insts [1 3])]]
     (is (= (freeze v) #{[13 88] [87 55] [74 31] [54 5] [9 12]}))))
 (deftest test-edit
   (is (= (edit [:a :b :c] 3 :d) [:a :b :c :d]))
@@ -58,14 +58,25 @@
     (is (= (edit d :d [9 9]) (assoc d :d [9 9])))
     (is (= (edit d all 1 del) {:a [0] :b [2] :c [4]}))))
 (deftest test-edit-view
-  (let [v (view par-database :insts [1 3])
+  (let [pd (par-database)
+        v  (view pd :insts [1 3])
         v0 (freeze v)
         _  (is (= v0 #{[13 88] [87 55] [74 31] [54 5] [9 12]}))
         v1 (freeze (dosync (edit v 1 0)))
         _  (is (= v1 #{[13 0] [87 0] [74 0] [54 0] [9 0]}))
-        v2 (part par-database :insts [1 3])]
+        v2 (part pd :insts [1 3])]
     (is (= v2 #{[13 0] [87 0] [74 0] [54 0] [9 0]}))))
-    
+(deftest test-with
+  (is (= (with [:a :b :c] :d) #{[:a :b :c] :d}))
+  (is (= (with [:a :b :c] 2 :d) [:a :b #{:c :d}]))
+  (is (= (with {:a [1 2 3] :b [2 3 4] :c [3 4 5]} [:a :c] 0 0)
+         {:a [#{1 0} 2 3] :b [2 3 4] :c [#{3 0} 4 5]})))
+(deftest test-wout
+  (is (= (wout [:a :b :c] :a) [:a :b :c]))
+  (is (= (wout #{:a :b :c} :a) #{:b :c}))
+  (is (= (wout [:a :b :c] 0 :a) [#{} :b :c]))
+  (is (= (wout {:a #{1 2 3} :b #{2 3 4} :c #{3 4 5}} [:a :c] 3)
+         {:a #{1 2} :b #{2 3 4} :c #{4 5}})))
   
 
 

@@ -1007,9 +1007,9 @@
                          (build d d [[kv kd] (dict-lens-kv k d)
                                      :let    [vv (if (lens-single? k) v (edit-vget v kv))
                                               vd (dict-get d kd {})]]
-                           (cond ks (dict-set d kd (if ks (edits vd ks vv) vv))
+                           (cond ks                  (dict-set d kd (edits vd ks vv))
                                  (identical? vv del) (dict-unset d kd)
-                                 :else (dict-set d kd vv))))
+                                 :else               (dict-set d kd vv))))
          :else         (arg-err "cannot edit parts " ks " of non-dict object")))
   ([d k1 v1 & more]
    (loop [s (seq more), d (edits d k1 v1)]
@@ -1039,60 +1039,78 @@
     (if (empty? ks) v (edits d ks v))))
 
 ;; #with ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn withs
+  "
+  (withs d [keys...] dval) yields a duplicate of the dictionary d but with the dict-subionary
+    specified by the given keys conjoined with the dict-sub dval. The dval dictionary must have a
+    matching shape as the selected subdict, which will have a shape equivalent to (part d keys...).
+    Note that dval may not fully specify all elements but instead specify all elements below the
+    given level.
+  "
+  ([d ks v]
+   (cond (empty? ks)   (if (dict-set? d) (dict-add d v) #{d v})
+         (dict-set? d) (build d d [x (dict-seq d)] (dict-add (dict-drop d x) (apply withs x ks v)))
+         (dict-row? d) (let [[k & ks] ks]
+                         (build d d [[kv kd] (dict-lens-kv k d)
+                                     :let    [vv (if (lens-single? k) v (edit-vget v kv))
+                                              vd (dict-get d kd {})]]
+                           (dict-set d kd (if ks (withs vd ks vv) (dict-add vd vv)))))
+         :else         (arg-err "with cannot add into non-dict-row")))
+  ([d k1 v1 k2 v2 & more]
+   (loop [s (seq more), d (withs (withs d k1 v1) k2 v2)]
+     (if s
+       (if-let [ss (next s)]
+         (recur (next ss) (withs d (first s) (first ss)))
+         (arg-err "withs: even number of key/value arguments required"))
+       d))))
 (defn with
   "
   (with d keys... dval) yields a duplicate of the dictionary d but with the dict-subionary specified
-    by the given keys replaced with the dict-sub dval. The dval dictionary must have a matching
+    by the given keys conjoined with the dict-sub dval. The dval dictionary must have a matching
     shape as the selected subdict, which will have a shape equivalent to (part d keys...). Note that
     dval may not fully specify all elements but instead specify all elements below the given level.
-
-  Examples:
-    (def data {:a {:b [4 6 8] :c [3 5 7]} :x {:y 1 :z 4}})
-    (edit data :a :c [0 2] [:x :y])
-       ; ==> {:a {:b [4 6 8] :c [:x 5 y]} :x {:y 1 :z 4}}
-    (edit data :a [:c :b] all [[0 1 2] [3 4 5]])
-       ; ==> {:a {:b [3 4 5] :c [0 1 2]} :x {:y 1 :z 4}}
-    (edit data :a [:c :b] all {:b [0 1 2], :c [3 4 5]})
-       ; ==> {:a {:b [0 1 2] :c [3 4 5]} :x {:y 1 :z 4}}
   "
   [d & more]
-  (cond (empty? more)      d
-        (nil? (next more)) (if (dict-set? d) (dict-add d (first more)) #{d (first more)})
-        (dict-set? d)      (build d d [x (dict-seq d)]
-                             (dict-add (dict-drop d x) (apply with x more)))
-        :else              (let [[k & more] more]
-                             (if (dict-row? d)
-                               (dict-set d k (apply with (dict-get d k {}) more))
-                               (arg-err "with: cannot add into non-dict-row")))))
+  (if more 
+    (let [[ks v] (most-last more)]
+      (if (empty? ks) (dict-add d v) (withs d ks v)))
+    d))
 
 ;; #wout ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn wouts
+  "
+  (wouts d [keys...] v) yields a duplicate of the dictionary d but with the dict-subionary v at the
+    position specified by the given keys disjoined. The dictionary v must have a matching shape to
+    the selected subdict, which will have a shape equivalent to (part d keys...). Note that v may
+    not fully specify all elements but instead specify all elements below the given level.
+  "
+  ([d ks v]
+   (cond (empty? ks)   (cond (dict-set? d) (dict-drop d v) (= d v) #{} :else d)
+         (dict-set? d) (build d d [x (dict-seq d)] (dict-add (dict-drop d x) (apply wouts x ks v)))
+         (dict-row? d) (let [[k & ks] ks]
+                         (build d d [[kv kd] (dict-lens-kv k d)
+                                     :let    [vv (if (lens-single? k) v (edit-vget v kv))
+                                              vd (dict-get d kd {})]]
+                           (dict-set d kd (if ks (wouts vd ks vv) (dict-drop vd vv)))))
+         :else         (arg-err "wout cannot drop from non-dict-row")))
+  ([d k1 v1 k2 v2 & more]
+   (loop [s (seq more), d (wouts (wouts d k1 v1) k2 v2)]
+     (if s
+       (if-let [ss (next s)]
+         (recur (next ss) (wouts d (first s) (first ss)))
+         (arg-err "withs: even number of key/value arguments required"))
+       d))))
 (defn wout
   "
-  (edit d keys... dval) yields a duplicate of the dictionary d but with the dict-subionary specified
-    by the given keys replaced with the dict-sub dval. The dval dictionary must have a matching
-    shape as the selected subdict, which will have a shape equivalent to (part d keys...). Note that
-    dval may not fully specify all elements but instead specify all elements below the given level.
-
-  Examples:
-    (def data {:a {:b [4 6 8] :c [3 5 7]} :x {:y 1 :z 4}})
-    (edit data :a :c [0 2] [:x :y])
-       ; ==> {:a {:b [4 6 8] :c [:x 5 y]} :x {:y 1 :z 4}}
-    (edit data :a [:c :b] all [[0 1 2] [3 4 5]])
-       ; ==> {:a {:b [3 4 5] :c [0 1 2]} :x {:y 1 :z 4}}
-    (edit data :a [:c :b] all {:b [0 1 2], :c [3 4 5]})
-       ; ==> {:a {:b [0 1 2] :c [3 4 5]} :x {:y 1 :z 4}}
+  (wout d keys... v) yields a duplicate of the dictionary d but with the dict-subionary v at the
+    position specified by the given keys disjoined. The dictionary v must have a matching shape to
+    the selected subdict, which will have a shape equivalent to (part d keys...). Note that v may
+    not fully specify all elements but instead specify all elements below the given level.
   "
   [d & more]
-  (cond (empty? more)      d
-        (nil? (next more)) (let [k (first more), k (if (dict-set? k) k #{k})]
-                             (cond (dict-set? d)   (reduce dict-drop d (dict-seq k))
-                                   (dict-has? k d) #{}
-                                   :else           d))
-        (dict-set? d)      (build d d [x (dict-seq d)]
-                             (dict-add (dict-drop d x) (apply wout x more)))
-        :else              (let [[k & more] more]
-                             (if (dict-row? d)
-                               (dict-set d k (apply wout (dict-get d k {}) more))
-                               (arg-err "wout: cannot drop from within non-dict-row")))))
+  (if more 
+    (let [[ks v] (most-last more)]
+      (if (empty? ks) (dict-drop d v) (wouts d ks v)))
+    d))
 
 

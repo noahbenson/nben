@@ -94,3 +94,9 @@
 ;; --> structured ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (import-all-vars nben.util.structured)
 
+;; --> data ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(import-vars [nben.util.data view part edit edits with withs wout wouts frozen? freeze dict?
+                             lazy-map lazy-map? lazy-val? get-delay normal-val? realized-val?
+                             unrealized-val? seqmap seqmap? sats sat? pattern patt all del ??])
+
+

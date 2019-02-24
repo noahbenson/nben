@@ -30,6 +30,7 @@
   (:require nben.util.iterator)
   (:require nben.util.structured)
   (:require nben.util.misc)
+  (:require nben.util.data)
 
   (:require clojure.string)
   (:require clojure.data.priority-map)
@@ -97,6 +98,7 @@
 ;; --> data ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (import-vars [nben.util.data view part edit edits with withs wout wouts frozen? freeze dict?
                              lazy-map lazy-map? lazy-val? get-delay normal-val? realized-val?
-                             unrealized-val? seqmap seqmap? sats sat? pattern patt all del ??])
+                             unrealized-val? seqmap seqmap? sats sat? pattern patt all del ??
+                             from-json-struct to-json-struct])
 
 

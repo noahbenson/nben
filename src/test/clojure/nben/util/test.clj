@@ -20,7 +20,6 @@
 
 (ns nben.util.test
   (:use nben.util)
-  (:use nben.util.data)
   (:use clojure.test))
 
 (def map-database
@@ -77,7 +76,9 @@
   (is (= (wout [:a :b :c] 0 :a) [#{} :b :c]))
   (is (= (wout {:a #{1 2 3} :b #{2 3 4} :c #{3 4 5}} [:a :c] 3)
          {:a #{1 2} :b #{2 3 4} :c #{4 5}})))
-  
+(deftest test-json
+  (let [x {:a [10 15 "abc"] :b {:c 10}}]
+    (is (= x (from-json-struct (to-json-struct x))))))
 
 
 

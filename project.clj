@@ -33,6 +33,7 @@
         nben.util.iterator
         nben.util.structured
         nben.util.misc
+        nben.util.data
         nben.util
         nben.sys]
   ;; targets that get cleaned...

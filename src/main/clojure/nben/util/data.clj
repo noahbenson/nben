@@ -278,7 +278,7 @@
 ;;                        {:a #{1 2 3} :b 1 :c 10}
 ;;                        {:a 10 :b #{12} :c 10}
 ;;                        {:a #{1 2 3} :b 14 :c 10}}})
-(declare view edit edits with wout sats sat?)
+(declare view edit edits with wout sat?)
 (deftype ^:private All [])
 (def all
   "
@@ -691,6 +691,15 @@
                       :else           [#{p2} nil])
         m2 (if (or (empty? ps) (contains? m2 ps)) m2 (assoc m2 ps nil))]
     (if m2 (with-meta p2 m2) p2)))
+(defprotocol PPattern
+  "
+  The PPattern protocol is extended by patterns and used in matching.
+  "
+  (sats [_ d] "
+  (sats p d) yields the set of matches that satisfy the pattern p in the dictionary d. Each match is
+    represented as a map of parameters to matched values. If the set of satisfiers is empty, nil is 
+    yielded. If the pattern has no parameters but there is a match, then the '#{{}} is yielded.
+  "))
 (defn- dict-match [prow d]
   (let [params (patt-params prow)
         ss (cond
@@ -736,21 +745,16 @@
     (when-let [ss (filter (partial patt-check prow)
                           (if sarg (map (partial basic-join [sarg]) ss) ss))]
       (when-not (empty? ss) (set ss)))))
-(defmultipro PPattern
-  "
-  The PPattern protocol is extended by patterns and used in matching.
-  "
-  #(cond (nil? %) :obj, (map? %) :map, (set? %) :set, (vector? %) :vec, (seq? %) :seq, :else :obj)
-  {:map {:sats dict-match}
-   :vec {:sats dict-match}
-   :seq {:sats dict-match}
-   :set {:sats dict-match}
-   :obj {:sats #(when (= %1 %2) #{{}})}}
-  (sats [_ d] "
-  (sats p d) yields the set of matches that satisfy the pattern p in the dictionary d. Each match is
-    represented as a map of parameters to matched values. If the set of satisfiers is empty, nil is 
-    yielded. If the pattern has no parameters but there is a match, then the '#{{}} is yielded.
-  "))
+(extend-protocol PPattern
+  nil    (sats [_ x] (when (empty? x) #{{}}))
+  Object (sats [o x]
+           (if (identical? (class x) Object)
+             (when (= o x) #{{}})
+             (do (extend (class o)
+                   PPattern {:sats (if (or (map? o) (set? o) (vector? o) (seq? o))
+                                     dict-match
+                                     #(when (= %1 %2) #{{}}))})
+                 (sats o x)))))
 (defn sat?
   "
   (sat? p d) yields true if the given pattern p is satisfied by the dictionary d and false
@@ -1071,3 +1075,114 @@
     d))
 
 
+;; #JSON ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(declare to-json-struct from-json-struct)
+(defn to-json-string
+  "
+  (to-json-string obj) yields a JSON-compatible string that represents the given object obj; the
+    type of the object is indicated by the first character of the string.
+
+  Strings, symbols, keywords and numbers can all be converted into strings.
+  "
+  [obj]
+  (cond (string? obj)  (str \" obj)
+        (symbol? obj)  (str \' obj)
+        (keyword? obj) (str obj)
+        (integer? obj) (str \# obj)
+        (number? obj)  (str \. (Float/floatToRawIntBits (.doubleValue (float obj))))
+        :else (arg-err "Object cannot be converted to JSON-string: " obj)))
+(def- json-string-translators
+  {\" identity
+   \' symbol
+   \: keyword
+   \# #(Integer/parseInt %)
+   \. #(Float/intBitsToFloat (.longValue (Integer/parseInt %)))})
+(defn from-json-string
+  "
+  (from-json-string s) yields a JSON-string compatible object from the given JSON-string s. This is
+    the inverse of to-json-string.
+  "
+  [s]
+  (if-let [f (get json-string-translators (first s))]
+    (f (subs s 1))
+    (arg-err "Unrecognized string-object type: " (first s))))
+(defn to-json-list
+  "
+  (to-json-list obj) yields a JSON-compatible vector that represents the given object obj. The obj
+    must be a set, seq, or vector.
+  "
+  [obj]
+  (cond (set? obj)    (vec (cons "set" (map to-json-struct obj)))
+        (vector? obj) (vec (cons "vec" (map to-json-struct obj)))
+        (seq? obj)    (vec (cons "seq" (map to-json-struct obj)))
+        :else         (arg-err "Given object cannot be converted to JSON-compatible list: " obj)))
+(def- json-list-translators
+  {"set" #(set (map from-json-struct %))
+   "vec" #(vec (map from-json-struct %))
+   "seq" #(seq (map from-json-struct %))})
+(defn from-json-list
+  "
+  (from-json-list obj) yields an object encoded as a JSON-compatible vector. This is the inverse of
+    to-json-list.
+  "
+  [obj]
+  (if-let [f (get json-list-translators (first obj))]
+    (f (next obj))
+    (arg-err "Unrecognized JSON-list type: " (first obj))))
+(defn to-json-map
+  "
+  (to-json-map obj) yields a JSON-compatible map that represents the given object obj. The obj must
+    be a map type.
+  "
+  [obj]
+  (if (map? obj)
+    (loop [ks (map to-json-string (keys obj)), vs (map to-json-struct (vals obj)), r (transient {})]
+      (if ks
+        (recur (next ks) (next vs) (assoc! r (first ks) (first vs)))
+        (persistent! r)))
+    (arg-err "Given object cannot be converted to JSON-compatible map: " obj)))
+(defn from-json-map
+  "
+  (from-json-map m) yields a map that is a decoded copy of the JSON-compatible map m. This is the
+    inverse of to-json-map.
+  "
+  [m]
+  (if (map? m)
+    (loop [ks (map from-json-string (keys m)), vs (map from-json-struct (vals m)), r (transient {})]
+      (if ks
+        (recur (next ks) (next vs) (assoc! r (first ks) (first vs)))
+        (persistent! r)))
+    (arg-err "Given object cannot be converted to JSON-compatible map: " m)))
+(defn from-json-struct
+  "
+  (from-json-struct data) yields a decoded copy of the given JSON-structure data. This is the
+    inverse of to-json-struct.
+  "
+  [obj]
+  (cond
+    ;; numbers get left as they are
+    (number? obj) obj
+    ;; strings...
+    (string? obj) (from-json-string obj)
+    ;; maps...
+    (map? obj) (from-json-map obj)
+    ;; vectors/lists
+    (or (seq? obj) (vector? obj)) (from-json-list obj)
+    ;; otherwise, ?
+    :else (arg-err "Given object is not a valid JSON-compatible structure: " obj)))
+(defn to-json-struct
+  "
+  (to-json-struct data) yields a copy of data that is compatible for conversion to JSON and back.
+  "
+  [obj]
+  (cond
+    ;; numbers get left as they are
+    (number? obj) obj
+    ;; anything that is always a string should be encoded such:
+    (or (string? obj) (symbol? obj) (keyword? obj)) (to-json-string obj)
+    ;; if we have a set, seq, or pure-vector, that get's encoded as a list-type
+    (or (set? obj) (vector? obj) (seq? obj)) (to-json-list obj)
+    ;; if we have a map, encode it...
+    (map? obj) (to-json-map obj)
+    ;; otherwise, not sure what this is...
+    :else (arg-err "Given object cannot be converted to JSON-compatible structure: " obj)))

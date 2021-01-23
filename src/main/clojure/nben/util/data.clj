@@ -695,17 +695,18 @@
   "
   The PPattern protocol is extended by patterns and used in matching.
   "
-  (sats [_ d] "
-  (sats p d) yields the set of matches that satisfy the pattern p in the dictionary d. Each match is
-    represented as a map of parameters to matched values. If the set of satisfiers is empty, nil is 
-    yielded. If the pattern has no parameters but there is a match, then the '#{{}} is yielded.
+  (satisfiers [_ d] "
+  (satisfiers p d) yields the set of matches that satisfy the pattern p in the dictionary d. Each
+    match is represented as a map of parameters to matched values. If the set of satisfiers is
+    empty, nil is yielded. If the pattern has no parameters but there is a match, then the '#{{}} is
+    yielded.
   "))
 (defn- dict-match [prow d]
   (let [params (patt-params prow)
         ss (cond
              ;; if this is a dict-set, we match anything inside of it
              (dict-set? d)
-             (apply concat (filter identity (map (partial sats prow) (dict-seq d))))
+             (apply concat (filter identity (map (partial satisfiers prow) (dict-seq d))))
              ;; if prow is a dict-set, we need to find matches to all of its elements
              (dict-set? prow)
              (let [s (dict-seq prow)]
@@ -713,9 +714,9 @@
                      (nil? (next s)) (let [f (first s)]
                                        (cond (contains? params f) #{{f d}}
                                              (dict-row? f) (dict-match (add-patt-meta f prow) d)
-                                             :else (sats f d)))
+                                             :else (satisfiers f d)))
                      :else (reduce basic-join
-                                   (map #(sats (add-patt-meta % prow) d) (dict-seq prow)))))
+                                   (map #(satisfiers (add-patt-meta % prow) d) (dict-seq prow)))))
              ;; if d is a not a dict, (and prow is not a set), there can't be a match
              (not (dict? d)) nil
              ;; if empty, simple:
@@ -735,7 +736,7 @@
                               ;; could be that the pattern allows a wildcard
                               (contains? params pv) (recur ks (basic-join ss [{pv v}]))
                               ;; could be that they match... if not, no match here either...
-                              :else (when-let [ms (sats (add-patt-meta pv prow) v)]
+                              :else (when-let [ms (satisfiers (add-patt-meta pv prow) v)]
                                       (recur ks (basic-join ss ms)))))
                           ss))]
                (when-not (empty? ss) ss))
@@ -746,24 +747,24 @@
                           (if sarg (map (partial basic-join [sarg]) ss) ss))]
       (when-not (empty? ss) (set ss)))))
 (extend-protocol PPattern
-  nil    (sats [_ x] (when (empty? x) #{{}}))
-  Object (sats [o x]
+  nil    (satisfiers [_ x] (when (empty? x) #{{}}))
+  Object (satisfiers [o x]
            (if (identical? (class x) Object)
              (when (= o x) #{{}})
              (do (extend (class o)
-                   PPattern {:sats (if (or (map? o) (set? o) (vector? o) (seq? o))
+                   PPattern {:satisfiers (if (or (map? o) (set? o) (vector? o) (seq? o))
                                      dict-match
                                      #(when (= %1 %2) #{{}}))})
-                 (sats o x)))))
+                 (satisfiers o x)))))
 (defn sat?
   "
   (sat? p d) yields true if the given pattern p is satisfied by the dictionary d and false
     otherwise.
   "
-  [p d] (not (empty? (sats p d))))
+  [p d] (not (empty? (satisfiers p d))))
 (deftype ^:private Wildcard []
   PPattern
-  (sats [_ d] #{{}}))
+  (satisfiers [_ d] #{{}}))
 (def ??
   "
   ?? is a wildcard pattern; when used as a pattern, it matches against anything.
@@ -846,6 +847,17 @@
     (if-not (empty? meta)
       `(let [f# ~form] (with-meta (if (with-meta? f#) f# #{f#}) ~meta))
       form)))
+(defn sats
+  "
+  (sats dict patt) is equivalent to (satisfiers patt dict). This form is intended to be used along
+    with the functions pick, view, part, crop, with, wout, and edit and the macro -> in that the
+    functions all transform a dictionary, which is their first argument.
+  (sats dict form [params...]) is equivalent to (sats dict (patt form [params...])).
+  (sats dict form [params...] cond-fn) is equivalent to (sats dict (patt form [params...] cond-fn)).
+  "
+  ([d p] (satisfiers p d))
+  ([d p params] (satisfiers (patt p params) d))
+  ([d p params condfn] (satisfiers (patt p params condfn) d)))
 
 ;; #DerefView ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defrecord DerefView [derefable lens-path]
@@ -1073,7 +1085,21 @@
     (let [[ks v] (most-last more)]
       (if (empty? ks) (dict-drop d v) (wouts d ks v)))
     d))
-
+;; #pick ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn pick
+  "
+  (pick dict f) yields a duplicate of the given dictionary dict containing only the elements for
+    which the predicate f yields a true-like value. If there are no matches, yields nil.
+  "
+  [d f]
+  (cond (dict-set? d) (loop [r #{}, s (dict-seq d)]
+                        (cond (not (empty? s)) (let [el (first s)]
+                                                 (recur (if (f el) (conj r el) r)
+                                                        (next s)))
+                              (empty? r) nil
+                              :else r))
+        (f d) d
+        :else nil))
 
 ;; #JSON ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (declare to-json-struct from-json-struct)

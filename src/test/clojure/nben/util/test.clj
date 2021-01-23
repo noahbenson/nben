@@ -39,7 +39,7 @@
   (pattern {:data {:species :s, :position [:x :y :z], :props :old}} [s x y z] true :allow :any))
 
 (deftest test-sats
-  (let [s (sats q-old-trees map-database)]
+  (let [s (sats map-database q-old-trees)]
     (is (= (count s) 2))
     (is (or (and (= (first s) {:s :oak   :x 0 :y 0 :z 1})
                  (= (fnext s) {:s :maple :x 0 :y 2 :z 2}))
